@@ -14,16 +14,5 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-db.collection('test').add({
-    message: 'Hello Firebase!',
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-})
-.then((docRef) => {
-    console.log('✅ Firebase connected successfully! Test document ID:', docRef.id);
-    // Clean up test document
-    docRef.delete();
-})
-.catch((error) => {
-    console.error('❌ Firebase connection error:', error);
-    console.error('Make sure Firestore is enabled in your Firebase project');
-});
+// Log successful initialization
+console.log('Firebase initialized with project:', firebaseConfig.projectId);

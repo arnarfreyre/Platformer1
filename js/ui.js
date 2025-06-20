@@ -132,8 +132,17 @@ class UIManager {
             this.sfxVolumeSlider.addEventListener('input', () => this.updateVolumeDisplay());
         }
         if (this.onlineLevelsButton) {
-        this.onlineLevelsButton.addEventListener('click', () => {
-            this.showOnlineLevels();});
+            this.onlineLevelsButton.addEventListener('click', () => {
+                this.showOnlineLevels();
+            });
+        }
+        
+        // Back button for online levels
+        const backFromOnlineLevels = document.getElementById('backFromOnlineLevels');
+        if (backFromOnlineLevels) {
+            backFromOnlineLevels.addEventListener('click', () => {
+                this.showMenu(GameStates.MENU);
+            });
         }
     }
 
@@ -273,11 +282,50 @@ class UIManager {
         if (this.settingsMenu) this.settingsMenu.style.display = 'none';
         if (this.gameOverMenu) this.gameOverMenu.style.display = 'none';
         if (this.pauseMenu) this.pauseMenu.style.display = 'none';
+        
+        // Hide online levels menu
+        const onlineLevelsMenu = document.getElementById('onlineLevelsMenu');
+        if (onlineLevelsMenu) onlineLevelsMenu.style.display = 'none';
+        
+        // Hide level editor menu
+        const levelEditorMenu = document.getElementById('levelEditorMenu');
+        if (levelEditorMenu) levelEditorMenu.style.display = 'none';
     }
 
-    // Open level editor in a new tab
+    // Open level editor in the same screen
     openLevelEditor() {
-        window.open('level-editor.html', '_blank');
+        this.hideAllMenus();
+        const levelEditorMenu = document.getElementById('levelEditorMenu');
+        if (levelEditorMenu) {
+            levelEditorMenu.style.display = 'flex';
+            
+            // Initialize level editor if not already initialized
+            if (!window.levelEditor) {
+                // Initialize the level editor with integrated functionality
+                this.initializeLevelEditor();
+            }
+        }
+    }
+    
+    // Initialize the integrated level editor
+    initializeLevelEditor() {
+        // Load level editor scripts if not already loaded
+        if (!window.LevelEditor) {
+            console.error('Level editor scripts not loaded');
+            return;
+        }
+        
+        // Create integrated level editor instance
+        window.levelEditor = new window.LevelEditor();
+        window.levelEditor.init();
+        
+        // Add back button event listener
+        const backButton = document.getElementById('backFromLevelEditor');
+        if (backButton) {
+            backButton.addEventListener('click', () => {
+                this.showMenu(GameStates.MENU);
+            });
+        }
     }
 
     // Show level complete screen
