@@ -310,13 +310,13 @@ class UIManager {
     // Initialize the integrated level editor
     initializeLevelEditor() {
         // Load level editor scripts if not already loaded
-        if (!window.LevelEditor) {
-            console.error('Level editor scripts not loaded');
+        if (!window.IntegratedLevelEditor) {
+            console.error('Integrated level editor scripts not loaded');
             return;
         }
         
         // Create integrated level editor instance
-        window.levelEditor = new window.LevelEditor();
+        window.levelEditor = new window.IntegratedLevelEditor();
         window.levelEditor.init();
         
         // Add back button event listener

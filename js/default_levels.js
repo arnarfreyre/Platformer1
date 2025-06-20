@@ -514,3 +514,8 @@ const DEFAULT_PLAYER_START_POSITIONS = [
 
 // Export the default values
 export { DEFAULT_LEVELS, DEFAULT_LEVEL_NAMES, DEFAULT_PLAYER_START_POSITIONS };
+
+// Also expose to window for level editor
+window.defaultLevels = DEFAULT_LEVELS;
+window.defaultLevelNames = DEFAULT_LEVEL_NAMES;
+window.defaultStartPositions = DEFAULT_PLAYER_START_POSITIONS;

@@ -77,19 +77,31 @@ const ICE_ACCELERATION_MULTIPLIER = 1.1;
  */
 const TILE_TYPES = {
     0: null, // Empty space
-    1: { color: '#4c6baf', solid: true, name: 'Platform' }, // Standard platform
-    2: { color: '#d03535', solid: false, deadly: true, name: 'Spike (Up)' }, // Spike pointing up
-    3: { color: '#41a547', solid: true, name: 'Goal', goal: true }, // Goal platform - added goal property
-    4: { color: '#8b4513', solid: true, name: 'Dirt' }, // Dirt
-    5: { color: '#a58d5d', solid: true, name: 'Wood' }, // Wood
-    6: { color: '#808080', solid: true, name: 'Stone' }, // Stone
-    7: { color: '#6d8ad0', solid: true, ice: true, name: 'Ice' }, // Ice (slippery)
-    8: { color: '#555555', solid: true, bounce: true, name: 'Bounce' }, // Bouncy
-    // New spike types with different rotations
-    10: { color: '#d03535', solid: false, deadly: true, name: 'Spike (Up)', rotation: 0 },    // Triangle pointing up
-    11: { color: '#d03535', solid: false, deadly: true, name: 'Spike (Right)', rotation: 90 }, // Triangle pointing right
-    12: { color: '#d03535', solid: false, deadly: true, name: 'Spike (Down)', rotation: 180 }, // Triangle pointing down
-    13: { color: '#d03535', solid: false, deadly: true, name: 'Spike (Left)', rotation: 270 }  // Triangle pointing left
+    1: { color: '#5B7CFA', solid: true, name: 'Platform', 
+         editorColor: '#5B7CFA', editorBorder: '#3D5AF1' }, // Standard platform - blue
+    2: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Up)', 
+         editorColor: '#FF4757', editorBorder: '#EE5A6F' }, // Spike pointing up - red
+    3: { color: '#32D671', solid: true, name: 'Goal', goal: true,
+         editorColor: '#32D671', editorBorder: '#05C46B', editorSymbol: '★' }, // Goal - green with star
+    4: { color: '#B87333', solid: true, name: 'Dirt',
+         editorColor: '#B87333', editorBorder: '#8B4513', editorPattern: 'dirt' }, // Dirt - brown
+    5: { color: '#DEB887', solid: true, name: 'Wood',
+         editorColor: '#DEB887', editorBorder: '#CD853F', editorPattern: 'wood' }, // Wood - tan
+    6: { color: '#95A5A6', solid: true, name: 'Stone',
+         editorColor: '#95A5A6', editorBorder: '#7F8C8D', editorPattern: 'stone' }, // Stone - gray
+    7: { color: '#74C0FC', solid: true, ice: true, name: 'Ice',
+         editorColor: '#74C0FC', editorBorder: '#3498DB', editorPattern: 'ice' }, // Ice - light blue
+    8: { color: '#FF6B9D', solid: true, bounce: true, name: 'Bounce',
+         editorColor: '#FF6B9D', editorBorder: '#C44569', editorPattern: 'bounce' }, // Bouncy - pink
+    // New spike types with different rotations - all red but with direction indicators
+    10: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Up)', rotation: 0,
+          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '▲' },
+    11: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Right)', rotation: 90,
+          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '▶' },
+    12: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Down)', rotation: 180,
+          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '▼' },
+    13: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Left)', rotation: 270,
+          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '◀' }
 };
 
 //-----------------------------------------------------------------------------
