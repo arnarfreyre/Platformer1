@@ -286,46 +286,11 @@ class UIManager {
         // Hide online levels menu
         const onlineLevelsMenu = document.getElementById('onlineLevelsMenu');
         if (onlineLevelsMenu) onlineLevelsMenu.style.display = 'none';
-        
-        // Hide level editor menu
-        const levelEditorMenu = document.getElementById('levelEditorMenu');
-        if (levelEditorMenu) levelEditorMenu.style.display = 'none';
     }
 
-    // Open level editor in the same screen
+    // Open level editor in a new tab (like the old version)
     openLevelEditor() {
-        this.hideAllMenus();
-        const levelEditorMenu = document.getElementById('levelEditorMenu');
-        if (levelEditorMenu) {
-            levelEditorMenu.style.display = 'flex';
-            
-            // Initialize level editor if not already initialized
-            if (!window.levelEditor) {
-                // Initialize the level editor with integrated functionality
-                this.initializeLevelEditor();
-            }
-        }
-    }
-    
-    // Initialize the integrated level editor
-    initializeLevelEditor() {
-        // Load level editor scripts if not already loaded
-        if (!window.IntegratedLevelEditor) {
-            console.error('Integrated level editor scripts not loaded');
-            return;
-        }
-        
-        // Create integrated level editor instance
-        window.levelEditor = new window.IntegratedLevelEditor();
-        window.levelEditor.init();
-        
-        // Add back button event listener
-        const backButton = document.getElementById('backFromLevelEditor');
-        if (backButton) {
-            backButton.addEventListener('click', () => {
-                this.showMenu(GameStates.MENU);
-            });
-        }
+        window.open('level-editor.html', '_blank');
     }
 
     // Show level complete screen
