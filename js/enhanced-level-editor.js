@@ -672,13 +672,19 @@ function addCopyLevelMatrixButton() {
         }
 
         // Add event listener
-        copyLevelBtn.addEventListener('click', copyLevelMatrix);
+        copyLevelBtn.addEventListener('click', function() {
+            if (typeof window.copyLevelMatrix === 'function') {
+                window.copyLevelMatrix();
+            } else {
+                console.warn('copyLevelMatrix function not available');
+            }
+        });
     }
 }
 
 
-// Make functions available globally
-window.copyLevelMatrix = copyLevelMatrix;
+// Comment out references to copyLevelMatrix since it's not available yet
+// window.copyLevelMatrix = copyLevelMatrix;
 window.addCopyLevelMatrixButton = addCopyLevelMatrixButton;
 
 // Hook into the original initialization function if it exists

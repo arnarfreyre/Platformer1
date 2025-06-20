@@ -2,7 +2,19 @@
  * Level Editor
  * This file contains all the level editor functionality
  */
-document.addEventListener('DOMContentLoaded', function() {
+// Create a LevelEditor class that can be initialized when needed
+class LevelEditor {
+    constructor() {
+        this.initialized = false;
+    }
+
+    init() {
+        if (this.initialized) return;
+        this.initialized = true;
+        this.setupEditor();
+    }
+
+    setupEditor() {
     // Editor state
     let currentTileType = 0;
     let currentLevel = 0;
@@ -20,30 +32,40 @@ document.addEventListener('DOMContentLoaded', function() {
     window.levels = levels;
     window.currentLevel = currentLevel;
 
-    // DOM elements
+    // DOM elements - handle both standalone and integrated editor
+    const previewCanvasElement = document.getElementById('previewCanvas') || document.getElementById('editorPreviewCanvas');
+    const levelSelectElement = document.getElementById('level-select') || document.getElementById('editor-level-select');
+    const levelNameElement = document.getElementById('level-name') || document.getElementById('level-name-input');
+    
     const elements = {
         tileGrid: document.getElementById('tile-grid'),
         levelGrid: document.getElementById('level-grid'),
         tileInfo: document.getElementById('tile-info'),
-        levelSelect: document.getElementById('level-select'),
-        levelNameInput: document.getElementById('level-name'),
-        previewCanvas: document.getElementById('previewCanvas'),
-        previewCtx: document.getElementById('previewCanvas').getContext('2d')
+        levelSelect: levelSelectElement,
+        levelNameInput: levelNameElement,
+        previewCanvas: previewCanvasElement,
+        previewCtx: previewCanvasElement ? previewCanvasElement.getContext('2d') : null
     };
 
-    // Button elements
+    // Button elements - handle both standalone and integrated editor
     const buttons = {
-        save: document.getElementById('save-btn'),
-        clear: document.getElementById('clear-btn'),
+        save: document.getElementById('save-btn') || document.getElementById('save-level-btn'),
+        clear: document.getElementById('clear-btn') || document.getElementById('clear-level-btn'),
         newLevel: document.getElementById('new-level-btn'),
-        rename: document.getElementById('rename-btn'),
-        play: document.getElementById('play-btn'),
+        rename: document.getElementById('rename-btn') || document.getElementById('rename-level-btn'),
+        play: document.getElementById('play-btn') || document.getElementById('editor-play-btn'),
         backToGame: document.getElementById('back-to-game-btn'),
         copyLevel: document.getElementById('copy-level-matrix-btn')
     };
 
     // Initialize the editor
     function initEditor() {
+        // Check if essential elements exist
+        if (!elements.tileGrid || !elements.levelGrid) {
+            console.warn('Level editor elements not found, skipping initialization');
+            return;
+        }
+        
         createTilePalette();
         createGrid();
         createSpikeRotationControls();
@@ -53,7 +75,11 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
         setupKeyboardShortcuts();
         addCopyLevelButton();
-        setInterval(renderPreview, 1000 / 30); // Update preview at 30fps
+        
+        // Only start preview rendering if canvas exists
+        if (elements.previewCanvas && elements.previewCtx) {
+            setInterval(renderPreview, 1000 / 30); // Update preview at 30fps
+        }
     }
 
     // Add copy level matrix button
@@ -800,6 +826,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderPreview() {
         const ctx = elements.previewCtx;
         const canvas = elements.previewCanvas;
+        
+        // Check if canvas elements exist
+        if (!ctx || !canvas) return;
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -984,19 +1013,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up all event listeners
     function setupEventListeners() {
         // Level selector change
-        elements.levelSelect.addEventListener('change', () => {
-            displayLevel(parseInt(elements.levelSelect.value));
-        });
+        if (elements.levelSelect) {
+            elements.levelSelect.addEventListener('change', () => {
+                displayLevel(parseInt(elements.levelSelect.value));
+            });
+        }
 
         // Button events
-        buttons.save.addEventListener('click', () => saveLevels());
-        buttons.clear.addEventListener('click', clearLevel);
-        buttons.newLevel.addEventListener('click', addNewLevel);
-        buttons.rename.addEventListener('click', renameLevel);
-        buttons.backToGame.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-        buttons.play.addEventListener('click', testPlayLevel);
+        if (buttons.save) buttons.save.addEventListener('click', () => saveLevels());
+        if (buttons.clear) buttons.clear.addEventListener('click', clearLevel);
+        if (buttons.newLevel) buttons.newLevel.addEventListener('click', addNewLevel);
+        if (buttons.rename) buttons.rename.addEventListener('click', renameLevel);
+        if (buttons.backToGame) {
+            buttons.backToGame.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        if (buttons.play) buttons.play.addEventListener('click', testPlayLevel);
 
         // Remove export and import buttons if they exist (as specified)
         const exportBtn = document.getElementById('export-btn');
@@ -1048,4 +1081,20 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showNotification = showNotification;
     window.updateLevelSelector = updateLevelSelector;
     window.displayLevel = displayLevel;
+    
+    // Make copyLevelMatrix available globally
+    window.copyLevelMatrix = copyLevelMatrix;
+    }
+}
+
+// Export LevelEditor class
+window.LevelEditor = LevelEditor;
+
+// For backward compatibility, initialize on standalone editor page
+document.addEventListener('DOMContentLoaded', function() {
+    // Only auto-initialize if we're on the standalone editor page
+    if (document.getElementById('previewCanvas') && !document.getElementById('gameCanvas')) {
+        const editor = new LevelEditor();
+        editor.init();
+    }
 });

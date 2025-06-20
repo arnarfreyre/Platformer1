@@ -1,6 +1,10 @@
 # Pixel Platformer Game
 
+Website gervilausnir.com
+using firebase
+
 A fun, modular 2D platformer game with an integrated level editor.
+
 
 ## Features
 
