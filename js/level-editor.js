@@ -61,7 +61,8 @@ class LevelEditor {
         rename: document.getElementById('rename-btn') || document.getElementById('rename-level-btn'),
         play: document.getElementById('play-btn') || document.getElementById('editor-play-btn'),
         backToGame: document.getElementById('back-to-game-btn'),
-        copyLevel: document.getElementById('copy-level-matrix-btn')
+        copyLevel: document.getElementById('copy-level-matrix-btn'),
+        saveDefault: document.getElementById('save-default-btn')
     };
 
     // Helper function to save a new level to Firebase
@@ -97,6 +98,21 @@ class LevelEditor {
             const indicator = document.getElementById('editorModeIndicator');
             if (indicator) {
                 indicator.style.display = 'block';
+            }
+            
+            // Show save as default button, hide regular save
+            if (buttons.saveDefault) {
+                buttons.saveDefault.style.display = 'inline-block';
+            }
+            if (buttons.save) {
+                buttons.save.style.display = 'none';
+            }
+            
+            // Set default level name from localStorage
+            const pendingName = localStorage.getItem('pendingDefaultLevelName');
+            if (pendingName && elements.levelNameInput) {
+                elements.levelNameInput.value = pendingName;
+                levelNames[0] = pendingName;
             }
         }
         
@@ -805,6 +821,16 @@ class LevelEditor {
 
     // Trigger auto-save with debounce
     function triggerAutoSave() {
+        // Check if in admin mode - if so, don't auto-save
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (isAdminMode) {
+            // Just update the preview, don't save
+            renderPreview();
+            return;
+        }
+        
         // Clear previous timeout
         if (autoSaveTimeout) {
             clearTimeout(autoSaveTimeout);
@@ -1076,6 +1102,60 @@ class LevelEditor {
         localStorage.setItem('testPlayLevel', currentLevel);
         window.open('index.html?testLevel=' + currentLevel, '_blank');
     }
+    
+    // Save as default level (admin only)
+    async function saveAsDefaultLevel() {
+        try {
+            const levelName = elements.levelNameInput.value.trim();
+            if (!levelName) {
+                showNotification('Please enter a level name!', 3000);
+                return;
+            }
+            
+            // Get current level data
+            const levelData = levels[currentLevel];
+            const rotationDataForLevel = rotationData[currentLevel] || null;
+            
+            // Get player start position
+            let startPosition = { x: 1, y: 12 };
+            if (playerStartX !== null && playerStartY !== null) {
+                startPosition = { x: playerStartX, y: playerStartY };
+            }
+            
+            // Get the current count of default levels
+            const defaultCount = await db.collection('defaultLevels').get().then(snap => snap.size);
+            
+            // Create new default level document
+            const newDefaultLevel = {
+                name: levelName,
+                grid: JSON.stringify(levelData),
+                startPosition: startPosition,
+                rotationData: rotationDataForLevel ? JSON.stringify(rotationDataForLevel) : null,
+                isDefault: true,
+                order: defaultCount, // Add to the end
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // Add to defaultLevels collection
+            await db.collection('defaultLevels').doc(`level_${defaultCount}`).set(newDefaultLevel);
+            
+            // Clean up admin mode indicators
+            localStorage.removeItem('adminCreatingDefaultLevel');
+            localStorage.removeItem('pendingDefaultLevelName');
+            
+            showNotification(`Default level "${levelName}" saved successfully!`, 3000);
+            
+            // Show success and offer to close
+            if (confirm(`Default level "${levelName}" has been saved! Close the editor and return to admin panel?`)) {
+                window.close();
+            }
+            
+        } catch (error) {
+            console.error('Error saving default level:', error);
+            showNotification('Failed to save default level: ' + error.message, 3000);
+        }
+    }
 
     // Set up all event listeners
     function setupEventListeners() {
@@ -1097,6 +1177,7 @@ class LevelEditor {
             });
         }
         if (buttons.play) buttons.play.addEventListener('click', testPlayLevel);
+        if (buttons.saveDefault) buttons.saveDefault.addEventListener('click', async () => await saveAsDefaultLevel());
 
         // Remove export and import buttons if they exist (as specified)
         const exportBtn = document.getElementById('export-btn');

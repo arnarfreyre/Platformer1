@@ -402,78 +402,23 @@ function openLevelEditorForDefault() {
     // Open level editor in new tab
     window.open('level-editor.html?mode=admin-default', '_blank');
     
-    // Show instructions
-    alert('Design your level in the editor, save it, then click "Import as Default Level" in the admin panel.');
+    // Close the modal
+    closeCreateDefaultModal();
     
-    // Update the modal
-    document.getElementById('createDefaultModal').innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Create New Default Level</h3>
-            </div>
-            <div class="modal-body">
-                <p><strong>Level Name:</strong> ${levelName}</p>
-                <p>After designing and saving your level in the editor, click the button below:</p>
-                <button class="btn btn-primary" onclick="importSavedAsDefault()">
-                    Import Saved Level as Default
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateDefaultModal()">Cancel</button>
-            </div>
-        </div>
-    `;
+    // Show instructions
+    showStatus('defaultStatus', 
+        `Level editor opened in new tab. Design your level and click "Save as Default Level" when ready.`, 
+        'info'
+    );
 }
 
-// Import the saved level as a default level
+// This function is no longer needed since we save directly from the level editor
+// Keeping it for backward compatibility but it just shows an info message
 async function importSavedAsDefault() {
-    try {
-        const levelName = localStorage.getItem('pendingDefaultLevelName');
-        if (!levelName) {
-            throw new Error('No pending level name found');
-        }
-        
-        // Get the most recently saved custom level from Firebase
-        const customLevels = await db.collection('levels')
-            .orderBy('createdAt', 'desc')
-            .limit(1)
-            .get();
-        
-        if (customLevels.empty) {
-            throw new Error('No saved level found. Please create and save a level first.');
-        }
-        
-        const customLevel = customLevels.docs[0].data();
-        
-        // Get the current count of default levels
-        const defaultCount = await db.collection('defaultLevels').get().then(snap => snap.size);
-        
-        // Create new default level
-        const newDefaultLevel = {
-            name: levelName,
-            grid: customLevel.grid || JSON.stringify(customLevel.data),
-            startPosition: customLevel.playerStart || customLevel.startPosition || { x: 1, y: 12 },
-            isDefault: true,
-            order: defaultCount, // Add to the end
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        // Add to defaultLevels collection
-        await db.collection('defaultLevels').doc(`level_${defaultCount}`).set(newDefaultLevel);
-        
-        // Clean up
-        localStorage.removeItem('adminCreatingDefaultLevel');
-        localStorage.removeItem('pendingDefaultLevelName');
-        
-        showStatus('defaultStatus', `Default level "${levelName}" created successfully!`, 'success');
-        closeCreateDefaultModal();
-        loadDefaultLevels();
-        
-    } catch (error) {
-        console.error('Error importing level as default:', error);
-        showStatus('defaultStatus', 'Error creating default level: ' + error.message, 'error');
-    }
+    showStatus('defaultStatus', 
+        'Please use the "Save as Default Level" button in the level editor to save your default level.', 
+        'info'
+    );
 }
 
 // Handle enter key in password field
