@@ -166,6 +166,15 @@ class LevelEditor {
 
     // Add copy level matrix button
     function addCopyLevelButton() {
+        // Only add for admin mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (!isAdminMode) {
+            // Don't add the button for regular users
+            return;
+        }
+        
         const controlsContainer = document.querySelector('.controls div:first-child');
         if (!controlsContainer) return;
 
@@ -177,7 +186,7 @@ class LevelEditor {
             copyLevelBtn.title = 'Copy just the current level matrix to your clipboard';
 
             // Insert the button after the Save button
-            const saveBtn = document.getElementById('save-btn');
+            const saveBtn = document.getElementById('save-btn') || document.getElementById('save-default-btn');
             if (saveBtn) {
                 controlsContainer.insertBefore(copyLevelBtn, saveBtn.nextSibling);
             } else {
@@ -897,26 +906,11 @@ class LevelEditor {
 
     // Trigger auto-save with debounce
     function triggerAutoSave() {
-        // Check if in admin mode - if so, don't auto-save
-        const urlParams = new URLSearchParams(window.location.search);
-        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        // Disable auto-save for all users - only update preview
+        renderPreview();
         
-        if (isAdminMode) {
-            // Just update the preview, don't save
-            renderPreview();
-            return;
-        }
-        
-        // Clear previous timeout
-        if (autoSaveTimeout) {
-            clearTimeout(autoSaveTimeout);
-        }
-
-        // Set a new timeout to save after 500ms of inactivity
-        autoSaveTimeout = setTimeout(async () => {
-            await saveLevels(false); // Save without alert
-            renderPreview(); // Update the preview
-        }, 500);
+        // No auto-saving to Firebase anymore
+        // Users must manually click save
     }
 
     // Add a new level
@@ -1191,15 +1185,29 @@ class LevelEditor {
                 showNotification('Please enter a level name before testing!', 3000);
                 return;
             }
-            await saveSingleOnlineLevel();
+            
+            // Save and get the level ID
+            const levelId = await saveSingleOnlineLevel();
+            if (levelId) {
+                // Open the online level for testing
+                window.open(`index.html?playOnline=${levelId}`, '_blank');
+            }
         } else {
-            // Admin mode - save normally
-            await saveLevels(false);
+            // Admin mode - test the current level from memory
+            // Store the level data temporarily
+            const tempLevelData = {
+                grid: levels[currentLevel],
+                rotationData: rotationData[currentLevel] || null,
+                playerStart: (playerStartX !== null && playerStartY !== null) ? 
+                    { x: playerStartX, y: playerStartY } : null,
+                name: levelNames[currentLevel] || 'Test Level'
+            };
+            
+            localStorage.setItem('tempTestLevel', JSON.stringify(tempLevelData));
+            
+            // Open with test parameter
+            window.open('index.html?testLevel=temp', '_blank');
         }
-
-        // Set test level and open game in new tab
-        localStorage.setItem('testPlayLevel', currentLevel);
-        window.open('index.html?testLevel=' + currentLevel, '_blank');
     }
     
     // Save single online level for regular users
@@ -1211,8 +1219,15 @@ class LevelEditor {
                 return;
             }
             
-            // Create new level document
-            const levelId = db.collection('levels').doc().id;
+            // Check if we already have a saved level ID
+            let levelId = window.currentOnlineLevelId;
+            
+            if (!levelId) {
+                // Create new level document
+                levelId = db.collection('levels').doc().id;
+                window.currentOnlineLevelId = levelId;
+            }
+            
             const levelData = {
                 id: levelId,
                 name: levelName,
@@ -1238,22 +1253,16 @@ class LevelEditor {
             
             showNotification(`Level "${levelName}" saved online successfully!`, 3000);
             
-            // Offer to test or create new
-            if (confirm('Level saved! Would you like to test it?')) {
-                testPlayLevel();
-            } else if (confirm('Would you like to create a new level?')) {
-                // Reset the level
-                levels[0] = createEmptyLevel();
-                rotationData[0] = createEmptyRotationData();
-                playerStartX = null;
-                playerStartY = null;
-                elements.levelNameInput.value = '';
-                displayLevel(0);
-            }
+            // Store the level ID for test play
+            window.savedOnlineLevelId = levelId;
+            
+            // Return the level ID for test play
+            return levelId;
             
         } catch (error) {
             console.error('Error saving online level:', error);
             showNotification('Failed to save level: ' + error.message, 3000);
+            return null;
         }
     }
     

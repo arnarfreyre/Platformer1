@@ -47,8 +47,15 @@ class GameManager {
     checkForTestLevel() {
         const urlParams = new URLSearchParams(window.location.search);
         const testLevel = urlParams.get('testLevel');
+        const playOnline = urlParams.get('playOnline');
 
-        if (testLevel !== null) {
+        if (playOnline) {
+            // Playing an online level directly
+            this.playOnlineLevelId = playOnline;
+        } else if (testLevel === 'temp') {
+            // Testing a temporary level from editor
+            this.testTempLevel = true;
+        } else if (testLevel !== null) {
             this.testLevelIndex = parseInt(testLevel);
         }
     }
@@ -143,7 +150,18 @@ class GameManager {
     async startGame() {
         console.log("Starting game...");
         
-        // Ensure levels are loaded from Firebase
+        // Check for special level loading cases
+        if (this.playOnlineLevelId) {
+            // Load and play a specific online level
+            await this.loadAndPlayOnlineLevel(this.playOnlineLevelId);
+            return;
+        } else if (this.testTempLevel) {
+            // Load temporary test level from localStorage
+            await this.loadTempTestLevel();
+            return;
+        }
+        
+        // Normal game start - ensure levels are loaded from Firebase
         await levelLoader.ensureLoaded();
 
         // If a test level was specified, start that level
@@ -462,6 +480,226 @@ class GameManager {
         // Continue game loop if playing
         if (this.gameState.state === GameStates.PLAYING) {
             this.animationFrameId = requestAnimationFrame(() => this.gameLoop());
+        }
+    }
+
+    /**
+     * Load and play a specific online level
+     * @param {string} levelId - The Firebase document ID of the online level
+     */
+    async loadAndPlayOnlineLevel(levelId) {
+        try {
+            console.log("Loading online level:", levelId);
+            
+            // Load the level from Firebase
+            const doc = await db.collection('levels').doc(levelId).get();
+            
+            if (!doc.exists) {
+                console.error("Online level not found:", levelId);
+                alert("Level not found!");
+                return;
+            }
+            
+            const levelData = doc.data();
+            
+            // Parse the level grid
+            let grid;
+            if (levelData.data) {
+                grid = typeof levelData.data === 'string' ? JSON.parse(levelData.data) : levelData.data;
+            } else if (levelData.grid) {
+                grid = typeof levelData.grid === 'string' ? JSON.parse(levelData.grid) : levelData.grid;
+            } else {
+                console.error("No level data found");
+                alert("Invalid level data!");
+                return;
+            }
+            
+            // Parse rotation data if available
+            let rotationData = null;
+            if (levelData.rotationData) {
+                rotationData = typeof levelData.rotationData === 'string' ? 
+                    JSON.parse(levelData.rotationData) : levelData.rotationData;
+            }
+            
+            // Parse player start position if available
+            let playerStart = null;
+            if (levelData.playerStart) {
+                playerStart = typeof levelData.playerStart === 'string' ? 
+                    JSON.parse(levelData.playerStart) : levelData.playerStart;
+            }
+            
+            // Create a temporary level object
+            const tempLevel = {
+                grid: grid,
+                rotationData: rotationData,
+                playerStart: playerStart,
+                name: levelData.name || 'Online Level'
+            };
+            
+            // Store it in the level loader's memory
+            levelLoader.customLevel = tempLevel;
+            levelLoader.isPlayingCustomLevel = true;
+            
+            // Set the current level
+            this.gameState.currentLevel = grid;
+            
+            // Find player start position
+            let startPos;
+            if (playerStart) {
+                startPos = {
+                    x: playerStart.x * TILE_SIZE,
+                    y: playerStart.y * TILE_SIZE
+                };
+            } else {
+                // Search for player tile in the grid
+                startPos = { x: TILE_SIZE, y: TILE_SIZE };
+                for (let y = 0; y < grid.length; y++) {
+                    for (let x = 0; x < grid[y].length; x++) {
+                        if (grid[y][x] === 9) {
+                            startPos = { x: x * TILE_SIZE, y: y * TILE_SIZE };
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Create or reset player
+            if (this.gameState.player) {
+                this.gameState.player.reset(startPos.x, startPos.y);
+            } else {
+                this.gameState.player = new Player(startPos.x, startPos.y);
+            }
+            
+            // Reset game state
+            this.gameState.particles = [];
+            this.gameState.levelStartTime = performance.now();
+            this.gameState.levelTime = 0;
+            this.gameState.deaths = 0;
+            
+            // Hide menus and start game
+            if (this.uiManager) {
+                this.uiManager.hideAllMenus();
+            }
+            
+            // Start game loop
+            this.gameState.state = GameStates.PLAYING;
+            this.lastUpdateTime = performance.now();
+            this.accumulatedTime = 0;
+            
+            // Clear any existing animation frame
+            this.cancelAnimationFrame();
+            
+            // Start the game loop
+            this.gameLoop();
+            
+            // Start audio
+            audioManager.initialize();
+            audioManager.playMusic();
+            
+        } catch (error) {
+            console.error("Error loading online level:", error);
+            alert("Failed to load level: " + error.message);
+        }
+    }
+
+    /**
+     * Load and play a temporary test level from localStorage
+     */
+    async loadTempTestLevel() {
+        try {
+            console.log("Loading temporary test level");
+            
+            // Get the level from localStorage
+            const tempLevelData = localStorage.getItem('tempTestLevel');
+            
+            if (!tempLevelData) {
+                console.error("No temporary test level found");
+                alert("No test level found!");
+                return;
+            }
+            
+            const levelData = JSON.parse(tempLevelData);
+            
+            // Parse the level grid
+            let grid = levelData.grid;
+            if (typeof grid === 'string') {
+                grid = JSON.parse(grid);
+            }
+            
+            // Create a temporary level object
+            const tempLevel = {
+                grid: grid,
+                rotationData: levelData.rotationData,
+                playerStart: levelData.playerStart,
+                name: levelData.name || 'Test Level'
+            };
+            
+            // Store it in the level loader's memory
+            levelLoader.customLevel = tempLevel;
+            levelLoader.isPlayingCustomLevel = true;
+            
+            // Set the current level
+            this.gameState.currentLevel = grid;
+            
+            // Find player start position
+            let startPos;
+            if (levelData.playerStart) {
+                startPos = {
+                    x: levelData.playerStart.x * TILE_SIZE,
+                    y: levelData.playerStart.y * TILE_SIZE
+                };
+            } else {
+                // Search for player tile in the grid
+                startPos = { x: TILE_SIZE, y: TILE_SIZE };
+                for (let y = 0; y < grid.length; y++) {
+                    for (let x = 0; x < grid[y].length; x++) {
+                        if (grid[y][x] === 9) {
+                            startPos = { x: x * TILE_SIZE, y: y * TILE_SIZE };
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Create or reset player
+            if (this.gameState.player) {
+                this.gameState.player.reset(startPos.x, startPos.y);
+            } else {
+                this.gameState.player = new Player(startPos.x, startPos.y);
+            }
+            
+            // Reset game state
+            this.gameState.particles = [];
+            this.gameState.levelStartTime = performance.now();
+            this.gameState.levelTime = 0;
+            this.gameState.deaths = 0;
+            
+            // Hide menus and start game
+            if (this.uiManager) {
+                this.uiManager.hideAllMenus();
+            }
+            
+            // Start game loop
+            this.gameState.state = GameStates.PLAYING;
+            this.lastUpdateTime = performance.now();
+            this.accumulatedTime = 0;
+            
+            // Clear any existing animation frame
+            this.cancelAnimationFrame();
+            
+            // Start the game loop
+            this.gameLoop();
+            
+            // Start audio
+            audioManager.initialize();
+            audioManager.playMusic();
+            
+            // Clear the temp level from localStorage after loading
+            localStorage.removeItem('tempTestLevel');
+            
+        } catch (error) {
+            console.error("Error loading temp test level:", error);
+            alert("Failed to load test level: " + error.message);
         }
     }
 }
