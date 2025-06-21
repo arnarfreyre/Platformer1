@@ -305,6 +305,34 @@ class LevelLoader {
         const pos = this.playerStartPositions[this.currentLevel];
         return pos || { x: 1, y: 12 }; // Default position if not specified
     }
+    
+    /**
+     * Find player start position in the current level
+     * This checks both the stored position and scans the level for a player tile
+     */
+    findPlayerStartPosition() {
+        // First check if we have a stored position
+        const storedPos = this.getPlayerStartPosition();
+        
+        // Also scan the level for a player start tile (if implemented)
+        const level = this.getCurrentLevel();
+        if (level) {
+            for (let y = 0; y < level.length; y++) {
+                for (let x = 0; x < level[y].length; x++) {
+                    // Check if there's a special player start tile (e.g., tile type 9)
+                    if (level[y][x] === 9) {
+                        return { x: x * TILE_SIZE, y: y * TILE_SIZE };
+                    }
+                }
+            }
+        }
+        
+        // Return stored position converted to pixel coordinates
+        return {
+            x: storedPos.x * TILE_SIZE,
+            y: storedPos.y * TILE_SIZE
+        };
+    }
 
     /**
      * Move to the next level
