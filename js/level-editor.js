@@ -89,6 +89,17 @@ class LevelEditor {
             return;
         }
         
+        // Check if in admin mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (isAdminMode) {
+            const indicator = document.getElementById('editorModeIndicator');
+            if (indicator) {
+                indicator.style.display = 'block';
+            }
+        }
+        
         createTilePalette();
         createGrid();
         createSpikeRotationControls();
@@ -668,28 +679,77 @@ class LevelEditor {
     // Save levels to Firebase
     async function saveLevels(showAlert = true) {
         try {
+            // Check if this is admin creating a default level
+            const isAdminDefault = localStorage.getItem('adminCreatingDefaultLevel') === 'true';
+            
+            // Validate level names
+            for (let i = 0; i < levels.length; i++) {
+                if (!levelNames[i] || levelNames[i].trim() === '') {
+                    showNotification(`Level ${i + 1} must have a name!`, 3000);
+                    return;
+                }
+            }
+            
             // Get all existing custom level docs
             const existingLevels = await db.collection('levels').get();
             const batch = db.batch();
             
-            // Delete all existing custom levels
+            // Store existing level IDs to preserve them
+            const existingLevelIds = {};
             existingLevels.forEach(doc => {
-                batch.delete(doc.ref);
+                const data = doc.data();
+                if (data.name && data.order !== undefined) {
+                    existingLevelIds[data.order] = doc.id;
+                }
+            });
+            
+            // Delete levels that no longer exist
+            existingLevels.forEach(doc => {
+                const data = doc.data();
+                if (data.order >= levels.length) {
+                    batch.delete(doc.ref);
+                }
             });
             
             // Save all current levels
             for (let i = 0; i < levels.length; i++) {
-                const levelDoc = db.collection('levels').doc();
+                // Use existing ID if available, otherwise create new
+                const levelId = existingLevelIds[i] || db.collection('levels').doc().id;
+                const levelDoc = db.collection('levels').doc(levelId);
+                
                 const levelData = {
-                    name: levelNames[i],
+                    id: levelId, // Store the ID in the document
+                    name: levelNames[i].trim(),
                     data: levels[i],
                     order: i,
                     rotationData: rotationData[i] || null,
-                    playerStart: (playerStartX !== null && playerStartY !== null && i === currentLevel) ? 
-                        { x: playerStartX, y: playerStartY } : null,
+                    playerStart: null,
+                    author: 'Level Editor User', // You can implement user auth later
+                    plays: 0,
+                    rating: 0,
+                    ratings: 0,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
+                
+                // Add player start position for the current level
+                if (i === currentLevel && playerStartX !== null && playerStartY !== null) {
+                    levelData.playerStart = { x: playerStartX, y: playerStartY };
+                }
+                
+                // Preserve existing stats if updating
+                if (existingLevelIds[i]) {
+                    const existingDoc = await db.collection('levels').doc(levelId).get();
+                    if (existingDoc.exists) {
+                        const existing = existingDoc.data();
+                        levelData.plays = existing.plays || 0;
+                        levelData.rating = existing.rating || 0;
+                        levelData.ratings = existing.ratings || 0;
+                        levelData.createdAt = existing.createdAt;
+                        levelData.author = existing.author || 'Level Editor User';
+                    }
+                }
+                
                 batch.set(levelDoc, levelData);
             }
             
@@ -701,7 +761,7 @@ class LevelEditor {
             }
         } catch (error) {
             console.error('Error saving levels to Firebase:', error);
-            showNotification('Failed to save level to Firebase', 3000);
+            showNotification('Failed to save level to Firebase: ' + error.message, 3000);
         }
     }
 

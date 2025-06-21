@@ -368,6 +368,9 @@
             <!-- Default Levels Tab -->
             <div class="tab-content active" id="defaultTab">
                 <h2>Manage Default Levels</h2>
+                <button class="btn btn-primary" onclick="showCreateDefaultLevel()" style="margin-bottom: 20px;">
+                    ➕ Create New Default Level
+                </button>
                 <div class="status-message" id="defaultStatus"></div>
                 <ul class="level-list" id="defaultLevelsList">
                     <!-- Default levels will be loaded here -->
@@ -417,6 +420,30 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
                     <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Default Level Modal -->
+        <div class="modal" id="createDefaultModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Default Level</h3>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="createDefaultName" placeholder="Level Name (required)" required>
+                    <p style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="openLevelEditorForDefault()">
+                            Open Level Editor to Design Level
+                        </button>
+                    </p>
+                    <p style="color: #aaa; font-size: 14px;">
+                        Note: This will open the level editor in a new tab. Design your level, save it, 
+                        then come back here to finalize the default level creation.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeCreateDefaultModal()">Cancel</button>
                 </div>
             </div>
         </div>

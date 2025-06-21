@@ -375,6 +375,107 @@ function formatDate(timestamp) {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
 
+// Show create default level modal
+function showCreateDefaultLevel() {
+    document.getElementById('createDefaultModal').classList.add('active');
+}
+
+// Close create default level modal
+function closeCreateDefaultModal() {
+    document.getElementById('createDefaultModal').classList.remove('active');
+    document.getElementById('createDefaultName').value = '';
+}
+
+// Open level editor for creating default level
+function openLevelEditorForDefault() {
+    const levelName = document.getElementById('createDefaultName').value.trim();
+    
+    if (!levelName) {
+        alert('Please enter a level name first');
+        return;
+    }
+    
+    // Store the level name and admin status in localStorage
+    localStorage.setItem('adminCreatingDefaultLevel', 'true');
+    localStorage.setItem('pendingDefaultLevelName', levelName);
+    
+    // Open level editor in new tab
+    window.open('level-editor.html?mode=admin-default', '_blank');
+    
+    // Show instructions
+    alert('Design your level in the editor, save it, then click "Import as Default Level" in the admin panel.');
+    
+    // Update the modal
+    document.getElementById('createDefaultModal').innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Default Level</h3>
+            </div>
+            <div class="modal-body">
+                <p><strong>Level Name:</strong> ${levelName}</p>
+                <p>After designing and saving your level in the editor, click the button below:</p>
+                <button class="btn btn-primary" onclick="importSavedAsDefault()">
+                    Import Saved Level as Default
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCreateDefaultModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+}
+
+// Import the saved level as a default level
+async function importSavedAsDefault() {
+    try {
+        const levelName = localStorage.getItem('pendingDefaultLevelName');
+        if (!levelName) {
+            throw new Error('No pending level name found');
+        }
+        
+        // Get the most recently saved custom level from Firebase
+        const customLevels = await db.collection('levels')
+            .orderBy('createdAt', 'desc')
+            .limit(1)
+            .get();
+        
+        if (customLevels.empty) {
+            throw new Error('No saved level found. Please create and save a level first.');
+        }
+        
+        const customLevel = customLevels.docs[0].data();
+        
+        // Get the current count of default levels
+        const defaultCount = await db.collection('defaultLevels').get().then(snap => snap.size);
+        
+        // Create new default level
+        const newDefaultLevel = {
+            name: levelName,
+            grid: customLevel.grid || JSON.stringify(customLevel.data),
+            startPosition: customLevel.playerStart || customLevel.startPosition || { x: 1, y: 12 },
+            isDefault: true,
+            order: defaultCount, // Add to the end
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // Add to defaultLevels collection
+        await db.collection('defaultLevels').doc(`level_${defaultCount}`).set(newDefaultLevel);
+        
+        // Clean up
+        localStorage.removeItem('adminCreatingDefaultLevel');
+        localStorage.removeItem('pendingDefaultLevelName');
+        
+        showStatus('defaultStatus', `Default level "${levelName}" created successfully!`, 'success');
+        closeCreateDefaultModal();
+        loadDefaultLevels();
+        
+    } catch (error) {
+        console.error('Error importing level as default:', error);
+        showStatus('defaultStatus', 'Error creating default level: ' + error.message, 'error');
+    }
+}
+
 // Handle enter key in password field
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('adminPassword').addEventListener('keypress', (e) => {
@@ -383,10 +484,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Close modal when clicking outside
+    // Close modals when clicking outside
     document.getElementById('editModal').addEventListener('click', (e) => {
         if (e.target.id === 'editModal') {
             closeEditModal();
+        }
+    });
+    
+    document.getElementById('createDefaultModal').addEventListener('click', (e) => {
+        if (e.target.id === 'createDefaultModal') {
+            closeCreateDefaultModal();
         }
     });
 });
