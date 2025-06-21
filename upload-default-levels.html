@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Default Levels to Firebase</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #111;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #4c6baf;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #6d8ad0;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 5px;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Default Levels to Firebase</h1>
+    <p>This will upload all default levels to Firebase Firestore.</p>
+    
+    <button onclick="uploadDefaultLevels()">Upload Default Levels</button>
+    <button onclick="clearDefaultLevels()">Clear Default Levels (Danger!)</button>
+    
+    <div id="status" class="status"></div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    
+    <!-- Game constants and default levels -->
+    <script src="js/constants.js"></script>
+    
+    <script type="module">
+        import { DEFAULT_LEVELS, DEFAULT_LEVEL_NAMES, DEFAULT_PLAYER_START_POSITIONS } from './js/default_levels.js';
+        
+        window.uploadDefaultLevels = async function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Starting upload...';
+            
+            try {
+                const defaultLevels = DEFAULT_LEVELS || [];
+                const defaultNames = DEFAULT_LEVEL_NAMES || [];
+                const defaultPositions = DEFAULT_PLAYER_START_POSITIONS || [];
+                
+                if (defaultLevels.length === 0) {
+                    throw new Error('No default levels found!');
+                }
+                
+                statusDiv.innerHTML += '<br>Found ' + defaultLevels.length + ' default levels';
+                
+                // Create a batch write
+                const batch = db.batch();
+                
+                // Upload each level
+                for (let i = 0; i < defaultLevels.length; i++) {
+                    const levelData = {
+                        name: defaultNames[i] || `Level ${i + 1}`,
+                        grid: JSON.stringify(defaultLevels[i]),
+                        startPosition: defaultPositions[i] || { x: 1, y: 12 },
+                        isDefault: true,
+                        order: i,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    // Use a consistent ID for default levels
+                    const docRef = db.collection('defaultLevels').doc(`level_${i}`);
+                    batch.set(docRef, levelData);
+                    
+                    statusDiv.innerHTML += '<br>Prepared level ' + (i + 1) + ': ' + levelData.name;
+                }
+                
+                // Commit the batch
+                await batch.commit();
+                
+                statusDiv.innerHTML += '<br><span class="success">✓ All default levels uploaded successfully!</span>';
+                
+            } catch (error) {
+                console.error('Error uploading levels:', error);
+                statusDiv.innerHTML += '<br><span class="error">✗ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        window.clearDefaultLevels = async function() {
+            if (!confirm('Are you sure you want to delete all default levels from Firebase?')) {
+                return;
+            }
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Clearing default levels...';
+            
+            try {
+                const snapshot = await db.collection('defaultLevels').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                statusDiv.innerHTML += '<br><span class="success">✓ All default levels cleared!</span>';
+            } catch (error) {
+                console.error('Error clearing levels:', error);
+                statusDiv.innerHTML += '<br><span class="error">✗ Error: ' + error.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>
