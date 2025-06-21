@@ -653,6 +653,13 @@ function initDefaultLevelExportFeatures() {
 
 // Function to add a copy level matrix button to the interface
 function addCopyLevelMatrixButton() {
+    // Check if in admin mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAdminMode = urlParams.get('mode') === 'admin-default';
+    
+    // Only add the button for admin users
+    if (!isAdminMode) return;
+    
     const controlsContainer = document.querySelector('.controls div:first-child');
     if (!controlsContainer) return;
 

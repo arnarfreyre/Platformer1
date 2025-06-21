@@ -295,10 +295,22 @@ function closeEditModal() {
 // Preview level
 function previewLevel(levelId, type) {
     // Open the game with the specific level
-    const url = type === 'default' 
-        ? `index.html?testLevel=${levelId}&type=default`
-        : `index.html?testLevel=${levelId}&type=online`;
-    window.open(url, '_blank');
+    if (type === 'online') {
+        // For online levels, use the playOnline parameter
+        window.open(`index.html?playOnline=${levelId}`, '_blank');
+    } else {
+        // For default levels, use the testLevel parameter with the level index
+        // First, find the level index based on the ID
+        db.collection('defaultLevels').doc(levelId).get().then(doc => {
+            if (doc.exists) {
+                const levelOrder = doc.data().order;
+                window.open(`index.html?testLevel=${levelOrder}`, '_blank');
+            }
+        }).catch(error => {
+            console.error('Error previewing level:', error);
+            alert('Failed to preview level');
+        });
+    }
 }
 
 // Refresh online levels

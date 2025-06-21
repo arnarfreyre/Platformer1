@@ -377,67 +377,14 @@ class OnlineLevelBrowser {
         try {
             const level = this.currentViewedLevel;
             
-            // Load the fresh level data from Firebase
-            const levelDoc = await db.collection('levels').doc(level.id).get();
-            if (!levelDoc.exists) {
-                throw new Error('Level not found');
-            }
-            
-            const levelData = levelDoc.data();
-            
-            // Parse the level grid based on how it's stored
-            let grid;
-            if (levelData.data) {
-                // New format: data field (parse if string)
-                grid = typeof levelData.data === 'string' ? JSON.parse(levelData.data) : levelData.data;
-            } else if (levelData.grid) {
-                // Grid stored as string or array
-                grid = typeof levelData.grid === 'string' ? JSON.parse(levelData.grid) : levelData.grid;
-            } else if (level.grid) {
-                // Use the grid from the level object
-                grid = typeof level.grid === 'string' ? JSON.parse(level.grid) : level.grid;
-            } else {
-                throw new Error('Invalid level format - no grid data found');
-            }
-
-            // Close UI
-            this.closeLevelDetails();
-            this.hide();
-
-            // Store originals to restore later
-            if (!window.originalLevels) {
-                window.originalLevels = JSON.parse(JSON.stringify(window.levelLoader.levels));
-                window.originalLevelNames = [...window.levelLoader.levelNames];
-                window.originalStartPositions = JSON.parse(JSON.stringify(window.levelLoader.playerStartPositions));
-            }
-
-            // Temporarily replace the first level with the online level
-            window.levelLoader.levels[0] = grid;
-            window.levelLoader.levelNames[0] = levelData.name || level.name;
-            
-            // Set player start position
-            if (levelData.playerStart) {
-                window.levelLoader.playerStartPositions[0] = levelData.playerStart;
-            } else if (levelData.startPosition) {
-                window.levelLoader.playerStartPositions[0] = levelData.startPosition;
-            } else if (level.startPosition) {
-                window.levelLoader.playerStartPositions[0] = level.startPosition;
-            } else {
-                window.levelLoader.playerStartPositions[0] = { x: 1, y: 12 };
-            }
-            
-            // Mark as playing an online level
-            window.levelLoader.playingOnlineLevel = true;
-            window.levelLoader.currentOnlineLevelId = level.id;
-            
             // Update play count
             await db.collection('levels').doc(level.id).update({
                 plays: firebase.firestore.FieldValue.increment(1),
                 lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Start game
-            this.gameManager.startLevel(0);
+            // Open the game with the online level ID
+            window.location.href = `index.html?playOnline=${level.id}`;
 
         } catch (error) {
             console.error('Error loading level:', error);
