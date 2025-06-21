@@ -631,7 +631,13 @@ class LevelEditor {
                     
                     // Load rotation data if available
                     if (data.rotationData) {
-                        rotationData = [data.rotationData];
+                        try {
+                            const parsedRotationData = typeof data.rotationData === 'string' ? JSON.parse(data.rotationData) : data.rotationData;
+                            rotationData = [parsedRotationData];
+                        } catch (error) {
+                            console.error('Error parsing rotation data:', error);
+                            initializeRotationData();
+                        }
                     } else {
                         initializeRotationData();
                     }
@@ -1362,7 +1368,7 @@ class LevelEditor {
                     data: JSON.stringify(levelData),
                     grid: JSON.stringify(levelData), // Keep both for compatibility
                     playerStart: startPosition,
-                    rotationData: rotationDataForLevel,
+                    rotationData: rotationDataForLevel ? JSON.stringify(rotationDataForLevel) : null,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
@@ -1389,7 +1395,7 @@ class LevelEditor {
                     data: JSON.stringify(levelData),
                     grid: JSON.stringify(levelData), // Keep both for compatibility
                     playerStart: startPosition,
-                    rotationData: rotationDataForLevel,
+                    rotationData: rotationDataForLevel ? JSON.stringify(rotationDataForLevel) : null,
                     isDefault: true,
                     order: defaultCount, // Add to the end
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),

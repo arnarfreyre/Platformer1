@@ -18,6 +18,10 @@ class LevelLoader {
         this.currentLevel = 0;
         this.unlockedLevels = 1; // Start with only the first level unlocked
         
+        // Custom level state (for online/temp levels)
+        this.customLevel = null;
+        this.isPlayingCustomLevel = false;
+        
         // Loading state
         this.isLoading = true;
         this.loadingPromise = null;
@@ -295,6 +299,10 @@ class LevelLoader {
      * Get the current level data
      */
     getCurrentLevel() {
+        // Check if we're playing a custom level (online or temp test)
+        if (this.isPlayingCustomLevel && this.customLevel) {
+            return this.customLevel.grid;
+        }
         return this.levels[this.currentLevel] || null;
     }
 
@@ -302,6 +310,10 @@ class LevelLoader {
      * Get the current level name
      */
     getCurrentLevelName() {
+        // Check if we're playing a custom level
+        if (this.isPlayingCustomLevel && this.customLevel) {
+            return this.customLevel.name || 'Custom Level';
+        }
         return this.levelNames[this.currentLevel] || `Level ${this.currentLevel + 1}`;
     }
 
@@ -309,6 +321,10 @@ class LevelLoader {
      * Get player start position for current level
      */
     getPlayerStartPosition() {
+        // Check if we're playing a custom level
+        if (this.isPlayingCustomLevel && this.customLevel && this.customLevel.playerStart) {
+            return this.customLevel.playerStart;
+        }
         const pos = this.playerStartPositions[this.currentLevel];
         return pos || { x: 1, y: 12 }; // Default position if not specified
     }
@@ -318,6 +334,14 @@ class LevelLoader {
      * This checks both the stored position and scans the level for a player tile
      */
     findPlayerStartPosition() {
+        // Check if we're playing a custom level with a defined start position
+        if (this.isPlayingCustomLevel && this.customLevel && this.customLevel.playerStart) {
+            return {
+                x: this.customLevel.playerStart.x * TILE_SIZE,
+                y: this.customLevel.playerStart.y * TILE_SIZE
+            };
+        }
+        
         // First check if we have a stored position
         const storedPos = this.getPlayerStartPosition();
         

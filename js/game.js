@@ -167,7 +167,7 @@ class GameManager {
         // If a test level was specified, start that level
         if (this.testLevelIndex !== undefined) {
             this.startLevel(this.testLevelIndex);
-            this.testLevelIndex = undefined; // Clear test level index
+            // Don't clear testLevelIndex so it persists across deaths
         } else {
             this.startLevel(0); // Start from first level
         }
@@ -299,6 +299,12 @@ class GameManager {
         }
 
         audioManager.pauseMusic();
+        
+        // Clear custom level state when returning to menu
+        if (levelLoader.isPlayingCustomLevel) {
+            levelLoader.isPlayingCustomLevel = false;
+            levelLoader.customLevel = null;
+        }
     }
 
     /**
@@ -321,7 +327,22 @@ class GameManager {
      * Restart current level
      */
     restartLevel() {
-        this.startLevel(levelLoader.currentLevel);
+        // If we're playing a custom level (online or temp), just reset the game state
+        if (levelLoader.isPlayingCustomLevel) {
+            this.resetGameState();
+            
+            // Restart game loop if needed
+            if (this.gameState.state !== GameStates.PLAYING) {
+                this.gameState.state = GameStates.PLAYING;
+                this.lastUpdateTime = performance.now();
+                this.accumulatedTime = 0;
+                this.cancelAnimationFrame();
+                this.gameLoop();
+            }
+        } else {
+            // Normal level restart
+            this.startLevel(levelLoader.currentLevel);
+        }
     }
 
     /**
