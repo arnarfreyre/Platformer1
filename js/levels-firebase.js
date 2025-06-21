@@ -79,8 +79,8 @@ class LevelLoader {
             
             this.defaultLevelCount = this.levels.length;
             
-            // Load custom levels from localStorage (temporary until Firebase integration)
-            this.loadCustomLevels();
+            // Load custom levels from Firebase
+            await this.loadCustomLevelsFromFirebase();
             
             // Load progress
             this.loadProgress();
@@ -121,9 +121,59 @@ class LevelLoader {
     }
 
     /**
-     * Load custom levels from localStorage
+     * Load custom levels from Firebase
      */
-    loadCustomLevels() {
+    async loadCustomLevelsFromFirebase() {
+        try {
+            console.log('Loading custom levels from Firebase...');
+            
+            // Load custom levels from the 'levels' collection
+            const customSnapshot = await db.collection('levels')
+                .orderBy('order')
+                .get();
+            
+            // Process custom levels
+            customSnapshot.forEach(doc => {
+                const data = doc.data();
+                
+                // Parse the level data
+                let levelData;
+                try {
+                    // The data field contains the actual level grid
+                    levelData = data.data || (typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid);
+                } catch (error) {
+                    console.error(`Error parsing custom level ${data.name}:`, error);
+                    return;
+                }
+                
+                if (Array.isArray(levelData)) {
+                    this.levels.push(levelData);
+                    this.levelNames.push(data.name || `Custom Level ${this.levels.length - this.defaultLevelCount}`);
+                    
+                    // Handle player start position
+                    let startPos = { x: 1, y: 12 }; // Default
+                    if (data.playerStart) {
+                        startPos = data.playerStart;
+                    } else if (data.startPosition) {
+                        startPos = data.startPosition;
+                    }
+                    this.playerStartPositions.push(startPos);
+                }
+            });
+            
+            console.log(`Loaded ${customSnapshot.size} custom levels from Firebase`);
+            
+        } catch (error) {
+            console.error('Error loading custom levels from Firebase:', error);
+            // Fall back to loading from localStorage if Firebase fails
+            this.loadCustomLevelsFromLocalStorage();
+        }
+    }
+    
+    /**
+     * Load custom levels from localStorage (fallback)
+     */
+    loadCustomLevelsFromLocalStorage() {
         try {
             const customLevels = localStorage.getItem('customLevels');
             const customNames = localStorage.getItem('customLevelNames');
@@ -140,9 +190,11 @@ class LevelLoader {
                     this.levelNames.push(parsedNames[index] || `Custom Level ${index + 1}`);
                     this.playerStartPositions.push(parsedPositions[index] || { x: 1, y: 12 });
                 });
+                
+                console.log(`Loaded ${parsedLevels.length} custom levels from localStorage`);
             }
         } catch (error) {
-            console.error('Error loading custom levels:', error);
+            console.error('Error loading custom levels from localStorage:', error);
         }
     }
 
@@ -284,6 +336,19 @@ class LevelLoader {
      */
     getLevelCount() {
         return this.levels.length;
+    }
+    
+    /**
+     * Set the current level
+     * @param {number} levelIndex - The level index to set
+     * @returns {boolean} True if successful
+     */
+    setCurrentLevel(levelIndex) {
+        if (levelIndex >= 0 && levelIndex < this.levels.length) {
+            this.currentLevel = levelIndex;
+            return true;
+        }
+        return false;
     }
 }
 

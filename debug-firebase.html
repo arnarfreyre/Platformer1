@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Firebase Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #111;
+            color: white;
+        }
+        pre {
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .info {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Firebase Data Structure</h1>
+    <div id="output"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        async function debugFirebase() {
+            try {
+                output.innerHTML = '<p class="info">Checking Firebase data...</p>';
+                
+                // Check defaultLevels collection
+                const defaultSnapshot = await db.collection('defaultLevels')
+                    .orderBy('order')
+                    .get();
+                
+                output.innerHTML += `<h2>Default Levels Collection (${defaultSnapshot.size} documents):</h2>`;
+                
+                defaultSnapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    output.innerHTML += `
+                        <h3>Document ID: ${doc.id}</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <h4>Grid Data Type: ${typeof data.grid}</h4>
+                        <h4>Grid Sample (first row):</h4>
+                        <pre>${
+                            typeof data.grid === 'string' 
+                                ? JSON.parse(data.grid)[0] 
+                                : data.grid ? data.grid[0] : 'No grid data'
+                        }</pre>
+                    `;
+                });
+                
+                // Check if we can parse the levels
+                output.innerHTML += '<h2>Testing Level Loading:</h2>';
+                let loadedLevels = 0;
+                defaultSnapshot.forEach(doc => {
+                    try {
+                        const data = doc.data();
+                        const grid = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
+                        if (Array.isArray(grid)) {
+                            loadedLevels++;
+                            output.innerHTML += `<p class="success">✓ Level "${data.name}" loaded successfully (${grid.length}x${grid[0]?.length})</p>`;
+                        } else {
+                            output.innerHTML += `<p class="error">✗ Level "${data.name}" has invalid grid data</p>`;
+                        }
+                    } catch (error) {
+                        output.innerHTML += `<p class="error">✗ Error loading level: ${error.message}</p>`;
+                    }
+                });
+                
+                output.innerHTML += `<h2 class="success">Summary: ${loadedLevels}/${defaultSnapshot.size} levels loaded successfully</h2>`;
+                
+                // Also check the levels collection
+                const customSnapshot = await db.collection('levels').get();
+                output.innerHTML += `<h2>Custom Levels Collection: ${customSnapshot.size} documents</h2>`;
+                
+            } catch (error) {
+                output.innerHTML += `<p class="error">Error: ${error.message}</p>`;
+                console.error('Debug error:', error);
+            }
+        }
+        
+        // Run debug on load
+        debugFirebase();
+    </script>
+</body>
+</html>
