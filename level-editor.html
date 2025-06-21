@@ -340,7 +340,7 @@
         <div id="editorModeIndicator" style="display: none; color: #ff6b6b; font-size: 14px; margin-bottom: 10px;">
             🔒 Admin Mode - Creating Default Level
         </div>
-        <div class="level-selector">
+        <div class="level-selector" id="levelSelectorContainer">
             <label for="level-select">Level:</label>
             <select id="level-select"></select>
             <div id="level-order-controls" class="level-order-controls">
@@ -374,16 +374,13 @@
 
     <div class="controls">
         <div>
-            <button id="save-btn">Save Level</button>
+            <button id="save-btn">Save Online</button>
             <button id="save-default-btn" style="display: none; background-color: #ff6b6b;">Save as Default Level</button>
-            <!-- Copy Level Matrix button will be added here by JavaScript -->
-            <button id="export-btn">Export All Levels</button>
-            <button id="import-btn">Import Levels</button>
+            <button id="clear-btn">Clear Level</button>
+            <button id="play-btn">Test Play</button>
         </div>
         <div>
-            <button id="clear-btn">Clear Level</button>
-            <input type="text" id="level-name" placeholder="Level Name">
-            <button id="rename-btn">Rename</button>
+            <input type="text" id="level-name" placeholder="Level Name (Required)" style="width: 250px;">
             <button id="back-to-game-btn">Back to Game</button>
         </div>
     </div>

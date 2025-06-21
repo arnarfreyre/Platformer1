@@ -114,6 +114,38 @@ class LevelEditor {
                 elements.levelNameInput.value = pendingName;
                 levelNames[0] = pendingName;
             }
+        } else {
+            // Regular user mode - hide admin features
+            // Hide level selector and controls
+            const levelSelector = document.getElementById('levelSelectorContainer');
+            if (levelSelector) {
+                levelSelector.style.display = 'none';
+            }
+            
+            // Hide export/import buttons (they're already removed from HTML)
+            const exportBtn = document.getElementById('export-btn');
+            const importBtn = document.getElementById('import-btn');
+            if (exportBtn) exportBtn.style.display = 'none';
+            if (importBtn) importBtn.style.display = 'none';
+            
+            // Hide copy level matrix button
+            const copyBtn = document.getElementById('copy-level-matrix-btn');
+            if (copyBtn) copyBtn.style.display = 'none';
+            
+            // Hide rename button
+            if (buttons.rename) buttons.rename.style.display = 'none';
+            
+            // Update save button text
+            if (buttons.save) {
+                buttons.save.textContent = 'Save Online';
+                buttons.save.style.backgroundColor = '#4c6baf';
+            }
+            
+            // Regular users only work with one level
+            levels = [createEmptyLevel()];
+            levelNames = ['My Level'];
+            rotationData = [createEmptyRotationData()];
+            currentLevel = 0;
         }
         
         createTilePalette();
@@ -531,8 +563,22 @@ class LevelEditor {
 
     // Load levels from Firebase instead of localStorage
     async function loadLevels() {
+        // Check if in admin mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (!isAdminMode) {
+            // Regular users start with a fresh level
+            levels = [createEmptyLevel()];
+            levelNames = ['My Level'];
+            rotationData = [createEmptyRotationData()];
+            displayLevel(0);
+            return;
+        }
+        
+        // Admin mode - load from Firebase
         try {
-            console.log('Loading levels from Firebase...');
+            console.log('Admin mode: Loading levels from Firebase...');
             
             // Clear any existing levels
             levels = [];
@@ -545,7 +591,23 @@ class LevelEditor {
             
             customLevelsSnapshot.forEach(doc => {
                 const data = doc.data();
-                levels.push(data.data);
+                // Parse the level data
+                let grid;
+                try {
+                    if (data.data) {
+                        grid = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                    } else if (data.grid) {
+                        grid = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
+                    } else {
+                        console.error(`No grid data for level ${data.name}`);
+                        return;
+                    }
+                } catch (error) {
+                    console.error(`Error parsing grid for level ${data.name}:`, error);
+                    return;
+                }
+                
+                levels.push(grid);
                 levelNames.push(data.name || `Level ${levels.length}`);
             });
             
@@ -553,8 +615,6 @@ class LevelEditor {
             if (levels.length === 0) {
                 levels = [createEmptyLevel()];
                 levelNames = ["Level 1"];
-                // Save the default level to Firebase
-                await saveNewLevelToFirebase(levels[0], levelNames[0], 0);
             }
             
             // Initialize rotation data
@@ -696,8 +756,24 @@ class LevelEditor {
     async function saveLevels(showAlert = true) {
         try {
             // Check if this is admin creating a default level
-            const isAdminDefault = localStorage.getItem('adminCreatingDefaultLevel') === 'true';
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdminMode = urlParams.get('mode') === 'admin-default';
             
+            // For regular users, enforce single level with name
+            if (!isAdminMode) {
+                const levelName = elements.levelNameInput.value.trim();
+                if (!levelName) {
+                    showNotification('Please enter a level name!', 3000);
+                    return;
+                }
+                levelNames[0] = levelName;
+                
+                // Save only the single level for regular users
+                await saveSingleOnlineLevel();
+                return;
+            }
+            
+            // Admin mode continues with normal save logic
             // Validate level names
             for (let i = 0; i < levels.length; i++) {
                 if (!levelNames[i] || levelNames[i].trim() === '') {
@@ -845,6 +921,15 @@ class LevelEditor {
 
     // Add a new level
     async function addNewLevel() {
+        // Only allow in admin mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (!isAdminMode) {
+            showNotification('Creating multiple levels is only available for admins', 3000);
+            return;
+        }
+        
         levels.push(createEmptyLevel());
         levelNames.push(`Level ${levels.length}`);
         rotationData.push(createEmptyRotationData());
@@ -1095,12 +1180,81 @@ class LevelEditor {
 
     // Test play the current level
     async function testPlayLevel() {
-        // Save the level first
-        await saveLevels(false); // Save without alert
+        // Check if in admin mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        
+        if (!isAdminMode) {
+            // Regular users - save before testing
+            const levelName = elements.levelNameInput.value.trim();
+            if (!levelName) {
+                showNotification('Please enter a level name before testing!', 3000);
+                return;
+            }
+            await saveSingleOnlineLevel();
+        } else {
+            // Admin mode - save normally
+            await saveLevels(false);
+        }
 
         // Set test level and open game in new tab
         localStorage.setItem('testPlayLevel', currentLevel);
         window.open('index.html?testLevel=' + currentLevel, '_blank');
+    }
+    
+    // Save single online level for regular users
+    async function saveSingleOnlineLevel() {
+        try {
+            const levelName = elements.levelNameInput.value.trim();
+            if (!levelName) {
+                showNotification('Please enter a level name!', 3000);
+                return;
+            }
+            
+            // Create new level document
+            const levelId = db.collection('levels').doc().id;
+            const levelData = {
+                id: levelId,
+                name: levelName,
+                data: JSON.stringify(levels[0]),
+                order: 0,
+                rotationData: rotationData[0] ? JSON.stringify(rotationData[0]) : null,
+                playerStart: null,
+                author: 'Anonymous User', // You can implement auth later
+                plays: 0,
+                rating: 0,
+                ratings: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // Add player start position
+            if (playerStartX !== null && playerStartY !== null) {
+                levelData.playerStart = { x: playerStartX, y: playerStartY };
+            }
+            
+            // Save to Firebase
+            await db.collection('levels').doc(levelId).set(levelData);
+            
+            showNotification(`Level "${levelName}" saved online successfully!`, 3000);
+            
+            // Offer to test or create new
+            if (confirm('Level saved! Would you like to test it?')) {
+                testPlayLevel();
+            } else if (confirm('Would you like to create a new level?')) {
+                // Reset the level
+                levels[0] = createEmptyLevel();
+                rotationData[0] = createEmptyRotationData();
+                playerStartX = null;
+                playerStartY = null;
+                elements.levelNameInput.value = '';
+                displayLevel(0);
+            }
+            
+        } catch (error) {
+            console.error('Error saving online level:', error);
+            showNotification('Failed to save level: ' + error.message, 3000);
+        }
     }
     
     // Save as default level (admin only)
