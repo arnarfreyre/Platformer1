@@ -92,7 +92,8 @@ class LevelEditor {
         
         // Check if in admin mode
         const urlParams = new URLSearchParams(window.location.search);
-        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        const isAdminMode = urlParams.get('mode') === 'admin-default' || urlParams.get('mode') === 'admin-edit';
+        const isEditMode = urlParams.get('mode') === 'admin-edit';
         
         if (isAdminMode) {
             const indicator = document.getElementById('editorModeIndicator');
@@ -109,10 +110,20 @@ class LevelEditor {
             }
             
             // Set default level name from localStorage
-            const pendingName = localStorage.getItem('pendingDefaultLevelName');
-            if (pendingName && elements.levelNameInput) {
-                elements.levelNameInput.value = pendingName;
-                levelNames[0] = pendingName;
+            if (isEditMode) {
+                // Editing existing level
+                const levelName = localStorage.getItem('adminEditingLevelName');
+                if (levelName && elements.levelNameInput) {
+                    elements.levelNameInput.value = levelName;
+                    levelNames[0] = levelName;
+                }
+            } else {
+                // Creating new level
+                const pendingName = localStorage.getItem('pendingDefaultLevelName');
+                if (pendingName && elements.levelNameInput) {
+                    elements.levelNameInput.value = pendingName;
+                    levelNames[0] = pendingName;
+                }
             }
         } else {
             // Regular user mode - hide admin features
@@ -168,7 +179,7 @@ class LevelEditor {
     function addCopyLevelButton() {
         // Only add for admin mode
         const urlParams = new URLSearchParams(window.location.search);
-        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        const isAdminMode = urlParams.get('mode') === 'admin-default' || urlParams.get('mode') === 'admin-edit';
         
         if (!isAdminMode) {
             // Don't add the button for regular users
@@ -574,7 +585,9 @@ class LevelEditor {
     async function loadLevels() {
         // Check if in admin mode
         const urlParams = new URLSearchParams(window.location.search);
-        const isAdminMode = urlParams.get('mode') === 'admin-default';
+        const isAdminMode = urlParams.get('mode') === 'admin-default' || urlParams.get('mode') === 'admin-edit';
+        const isEditMode = urlParams.get('mode') === 'admin-edit';
+        const editLevelId = urlParams.get('levelId');
         
         if (!isAdminMode) {
             // Regular users start with a fresh level
@@ -587,49 +600,101 @@ class LevelEditor {
         
         // Admin mode - load from Firebase
         try {
-            console.log('Admin mode: Loading levels from Firebase...');
-            
-            // Clear any existing levels
-            levels = [];
-            levelNames = [];
-            
-            // Load custom levels from Firebase
-            const customLevelsSnapshot = await db.collection('levels')
-                .orderBy('order')
-                .get();
-            
-            customLevelsSnapshot.forEach(doc => {
-                const data = doc.data();
-                // Parse the level data
-                let grid;
-                try {
-                    if (data.data) {
-                        grid = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-                    } else if (data.grid) {
-                        grid = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
-                    } else {
-                        console.error(`No grid data for level ${data.name}`);
-                        return;
+            if (isEditMode && editLevelId) {
+                console.log('Admin edit mode: Loading specific default level from Firebase...');
+                
+                // Load specific default level for editing
+                const levelDoc = await db.collection('defaultLevels').doc(editLevelId).get();
+                
+                if (levelDoc.exists) {
+                    const data = levelDoc.data();
+                    
+                    // Parse the level data
+                    let grid;
+                    try {
+                        if (data.data) {
+                            grid = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                        } else if (data.grid) {
+                            grid = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
+                        } else {
+                            console.error(`No grid data for level ${data.name}`);
+                            // Create empty level as fallback
+                            grid = createEmptyLevel();
+                        }
+                    } catch (error) {
+                        console.error(`Error parsing grid for level ${data.name}:`, error);
+                        grid = createEmptyLevel();
                     }
-                } catch (error) {
-                    console.error(`Error parsing grid for level ${data.name}:`, error);
-                    return;
+                    
+                    levels = [grid];
+                    levelNames = [data.name || 'Unnamed Level'];
+                    
+                    // Load rotation data if available
+                    if (data.rotationData) {
+                        rotationData = [data.rotationData];
+                    } else {
+                        initializeRotationData();
+                    }
+                    
+                    // Load player start position if available
+                    if (data.playerStart) {
+                        playerStartX = data.playerStart.x;
+                        playerStartY = data.playerStart.y;
+                    }
+                } else {
+                    console.error('Level not found for editing');
+                    // Fallback to empty level
+                    levels = [createEmptyLevel()];
+                    levelNames = ['Level 1'];
+                    initializeRotationData();
                 }
                 
-                levels.push(grid);
-                levelNames.push(data.name || `Level ${levels.length}`);
-            });
-            
-            // If no levels exist, create a default empty level
-            if (levels.length === 0) {
-                levels = [createEmptyLevel()];
-                levelNames = ["Level 1"];
+                displayLevel(0);
+            } else {
+                console.log('Admin mode: Loading levels from Firebase...');
+                
+                // Clear any existing levels
+                levels = [];
+                levelNames = [];
+                
+                // Load custom levels from Firebase
+                const customLevelsSnapshot = await db.collection('levels')
+                    .orderBy('order')
+                    .get();
+                
+                customLevelsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    // Parse the level data
+                    let grid;
+                    try {
+                        if (data.data) {
+                            grid = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                        } else if (data.grid) {
+                            grid = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
+                        } else {
+                            console.error(`No grid data for level ${data.name}`);
+                            return;
+                        }
+                    } catch (error) {
+                        console.error(`Error parsing grid for level ${data.name}:`, error);
+                        return;
+                    }
+                    
+                    levels.push(grid);
+                    levelNames.push(data.name || `Level ${levels.length}`);
+                });
+                
+                // If no levels exist, create a default empty level
+                if (levels.length === 0) {
+                    levels = [createEmptyLevel()];
+                    levelNames = ["Level 1"];
+                }
+                
+                // Initialize rotation data
+                initializeRotationData();
+                
+                displayLevel(0);
             }
-            
-            // Initialize rotation data
-            initializeRotationData();
-            
-            displayLevel(0);
         } catch (error) {
             console.error('Error loading levels from Firebase:', error);
             // Fallback to empty level on error
@@ -1285,33 +1350,65 @@ class LevelEditor {
                 startPosition = { x: playerStartX, y: playerStartY };
             }
             
-            // Get the current count of default levels
-            const defaultCount = await db.collection('defaultLevels').get().then(snap => snap.size);
+            // Check if we're editing an existing level
+            const urlParams = new URLSearchParams(window.location.search);
+            const isEditMode = urlParams.get('mode') === 'admin-edit';
+            const editLevelId = urlParams.get('levelId');
             
-            // Create new default level document
-            const newDefaultLevel = {
-                name: levelName,
-                grid: JSON.stringify(levelData),
-                startPosition: startPosition,
-                rotationData: rotationDataForLevel ? JSON.stringify(rotationDataForLevel) : null,
-                isDefault: true,
-                order: defaultCount, // Add to the end
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            // Add to defaultLevels collection
-            await db.collection('defaultLevels').doc(`level_${defaultCount}`).set(newDefaultLevel);
-            
-            // Clean up admin mode indicators
-            localStorage.removeItem('adminCreatingDefaultLevel');
-            localStorage.removeItem('pendingDefaultLevelName');
-            
-            showNotification(`Default level "${levelName}" saved successfully!`, 3000);
-            
-            // Show success and offer to close
-            if (confirm(`Default level "${levelName}" has been saved! Close the editor and return to admin panel?`)) {
-                window.close();
+            if (isEditMode && editLevelId) {
+                // Update existing default level
+                const updateData = {
+                    name: levelName,
+                    data: JSON.stringify(levelData),
+                    grid: JSON.stringify(levelData), // Keep both for compatibility
+                    playerStart: startPosition,
+                    rotationData: rotationDataForLevel,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('defaultLevels').doc(editLevelId).update(updateData);
+                
+                // Clean up localStorage
+                localStorage.removeItem('adminEditingDefaultLevel');
+                localStorage.removeItem('adminEditingLevelId');
+                localStorage.removeItem('adminEditingLevelName');
+                localStorage.removeItem('adminEditingLevelOrder');
+                
+                showNotification(`Default level "${levelName}" updated successfully!`, 3000);
+                
+                // Show success and offer to close
+                if (confirm(`Default level "${levelName}" has been updated! Close the editor and return to admin panel?`)) {
+                    window.close();
+                }
+            } else {
+                // Create new default level
+                const defaultCount = await db.collection('defaultLevels').get().then(snap => snap.size);
+                
+                const newDefaultLevel = {
+                    name: levelName,
+                    data: JSON.stringify(levelData),
+                    grid: JSON.stringify(levelData), // Keep both for compatibility
+                    playerStart: startPosition,
+                    rotationData: rotationDataForLevel,
+                    isDefault: true,
+                    order: defaultCount, // Add to the end
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Add to defaultLevels collection
+                await db.collection('defaultLevels').add(newDefaultLevel);
+                
+                // Clean up admin mode indicators
+                localStorage.removeItem('adminCreatingDefaultLevel');
+                localStorage.removeItem('pendingDefaultLevelName');
+                
+                showNotification(`Default level "${levelName}" saved successfully!`, 3000);
+                
+                // Show success and offer to close
+                if (confirm(`Default level "${levelName}" has been saved! Close the editor and return to admin panel?`)) {
+                    window.close();
+                }
             }
             
         } catch (error) {

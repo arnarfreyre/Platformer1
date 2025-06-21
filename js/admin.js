@@ -103,38 +103,129 @@ function createDefaultLevelItem(id, data, index, total) {
     return li;
 }
 
-// Move default level
-async function moveDefaultLevel(levelId, currentOrder, direction) {
-    try {
-        const newOrder = currentOrder + direction;
+// Track pending order changes
+let pendingOrderChanges = new Map();
+let originalLevelOrder = new Map();
+
+// Move default level (UI only)
+function moveDefaultLevel(levelId, currentOrder, direction) {
+    const newOrder = currentOrder + direction;
+    
+    // Update pending changes
+    pendingOrderChanges.set(levelId, newOrder);
+    
+    // Update UI without reloading
+    const levelsList = document.getElementById('defaultLevelsList');
+    const levelItems = Array.from(levelsList.children);
+    
+    // Find the current item and the item to swap with
+    let currentItem = null;
+    let swapItem = null;
+    
+    levelItems.forEach(item => {
+        const itemId = item.querySelector('.btn-primary').getAttribute('onclick').match(/'([^']+)'/)[1];
+        const itemOrder = parseInt(item.querySelector('.move-btn').getAttribute('onclick').match(/\d+/g)[1]);
         
-        // Get all default levels
-        const snapshot = await db.collection('defaultLevels')
-            .orderBy('order')
-            .get();
+        if (itemId === levelId) {
+            currentItem = item;
+        } else if (itemOrder === newOrder) {
+            swapItem = item;
+        }
+    });
+    
+    if (currentItem && swapItem) {
+        // Swap DOM elements
+        if (direction < 0) {
+            levelsList.insertBefore(currentItem, swapItem);
+        } else {
+            levelsList.insertBefore(swapItem, currentItem);
+        }
+        
+        // Update button states and onclick handlers
+        updateMoveButtons();
+        
+        // Show save changes button
+        showSaveChangesButton();
+    }
+}
+
+// Show save changes button
+function showSaveChangesButton() {
+    let saveButton = document.getElementById('saveOrderChangesBtn');
+    if (!saveButton) {
+        const container = document.querySelector('.admin-actions') || document.querySelector('.tab-content.active');
+        saveButton = document.createElement('button');
+        saveButton.id = 'saveOrderChangesBtn';
+        saveButton.className = 'btn btn-primary';
+        saveButton.textContent = 'Save Order Changes';
+        saveButton.style.marginTop = '20px';
+        saveButton.onclick = saveOrderChanges;
+        container.insertBefore(saveButton, container.firstChild);
+    }
+    saveButton.style.display = 'block';
+}
+
+// Update move buttons after reordering
+function updateMoveButtons() {
+    const levelsList = document.getElementById('defaultLevelsList');
+    const levelItems = Array.from(levelsList.children);
+    
+    levelItems.forEach((item, index) => {
+        const moveButtons = item.querySelectorAll('.move-btn');
+        const upButton = moveButtons[0];
+        const downButton = moveButtons[1];
+        
+        // Update disabled states
+        upButton.disabled = index === 0;
+        downButton.disabled = index === levelItems.length - 1;
+        
+        // Update onclick handlers with new order values
+        const levelId = item.querySelector('.btn-primary').getAttribute('onclick').match(/'([^']+)'/)[1];
+        upButton.setAttribute('onclick', `moveDefaultLevel('${levelId}', ${index}, -1)`);
+        downButton.setAttribute('onclick', `moveDefaultLevel('${levelId}', ${index}, 1)`);
+        
+        // Update order display
+        const orderText = item.querySelector('.level-meta');
+        if (orderText) {
+            orderText.innerHTML = orderText.innerHTML.replace(/Order: \d+/, `Order: ${index + 1}`);
+        }
+    });
+}
+
+// Save all order changes to Firebase
+async function saveOrderChanges() {
+    try {
+        showStatus('defaultStatus', 'Saving order changes...', 'info');
         
         const batch = db.batch();
+        const levelsList = document.getElementById('defaultLevelsList');
+        const levelItems = Array.from(levelsList.children);
         
-        // Find the level to swap with
-        let swapDoc = null;
-        snapshot.forEach(doc => {
-            if (doc.data().order === newOrder) {
-                swapDoc = doc;
-            }
+        // Update each level with its new order
+        levelItems.forEach((item, index) => {
+            const levelId = item.querySelector('.btn-primary').getAttribute('onclick').match(/'([^']+)'/)[1];
+            batch.update(db.collection('defaultLevels').doc(levelId), { order: index });
         });
         
-        if (swapDoc) {
-            // Swap the orders
-            batch.update(db.collection('defaultLevels').doc(levelId), { order: newOrder });
-            batch.update(swapDoc.ref, { order: currentOrder });
-            
-            await batch.commit();
-            showStatus('defaultStatus', 'Level order updated successfully', 'success');
-            loadDefaultLevels();
+        await batch.commit();
+        
+        // Clear pending changes
+        pendingOrderChanges.clear();
+        originalLevelOrder.clear();
+        
+        // Hide save button
+        const saveButton = document.getElementById('saveOrderChangesBtn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
         }
+        
+        showStatus('defaultStatus', 'Order changes saved successfully', 'success');
+        
+        // Reload to ensure consistency
+        loadDefaultLevels();
     } catch (error) {
-        console.error('Error moving level:', error);
-        showStatus('defaultStatus', 'Error moving level: ' + error.message, 'error');
+        console.error('Error saving order changes:', error);
+        showStatus('defaultStatus', 'Error saving order changes: ' + error.message, 'error');
     }
 }
 
@@ -241,9 +332,27 @@ async function editLevel(levelId, type) {
         
         if (doc.exists) {
             const data = doc.data();
-            document.getElementById('editLevelName').value = data.name || '';
-            document.getElementById('editLevelDescription').value = data.description || '';
-            document.getElementById('editModal').classList.add('active');
+            // For default levels, open the level editor with the level data
+            if (type === 'default') {
+                // Store level data in localStorage for the editor to pick up
+                localStorage.setItem('adminEditingDefaultLevel', 'true');
+                localStorage.setItem('adminEditingLevelId', levelId);
+                localStorage.setItem('adminEditingLevelName', data.name || '');
+                localStorage.setItem('adminEditingLevelOrder', data.order);
+                
+                // Open level editor with edit mode
+                window.open(`level-editor.html?mode=admin-edit&levelId=${levelId}`, '_blank');
+                
+                showStatus('defaultStatus', 
+                    'Level editor opened in new tab. Make your changes and click "Save Default Level" when ready.', 
+                    'info'
+                );
+            } else {
+                // For online levels, keep the existing metadata edit
+                document.getElementById('editLevelName').value = data.name || '';
+                document.getElementById('editLevelDescription').value = data.description || '';
+                document.getElementById('editModal').classList.add('active');
+            }
         }
     } catch (error) {
         console.error('Error loading level for edit:', error);
