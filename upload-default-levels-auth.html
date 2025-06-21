@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Default Levels to Firebase (Authenticated)</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #111;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #4c6baf;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #6d8ad0;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 5px;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .auth-section {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            background-color: #444;
+            border: 1px solid #666;
+            color: white;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Default Levels to Firebase (Authenticated)</h1>
+    
+    <div class="auth-section">
+        <h2>Authentication</h2>
+        <p>Sign in with email/password to upload levels:</p>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="signIn()">Sign In</button>
+        <button onclick="signUp()">Sign Up (First Time)</button>
+        <button onclick="signOut()" style="display:none;" id="signOutBtn">Sign Out</button>
+        <div id="authStatus"></div>
+    </div>
+    
+    <div id="mainSection" style="display:none;">
+        <p>This will upload all default levels to Firebase Firestore.</p>
+        
+        <button onclick="uploadDefaultLevels()" id="uploadBtn">Upload Default Levels</button>
+        <button onclick="clearDefaultLevels()" id="clearBtn">Clear Default Levels (Danger!)</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    
+    <!-- Game constants and default levels -->
+    <script src="js/constants.js"></script>
+    
+    <script type="module">
+        import { DEFAULT_LEVELS, DEFAULT_LEVEL_NAMES, DEFAULT_PLAYER_START_POSITIONS } from './js/default_levels.js';
+        
+        // Initialize Firebase Auth
+        const auth = firebase.auth();
+        
+        // Auth state observer
+        auth.onAuthStateChanged((user) => {
+            const authStatus = document.getElementById('authStatus');
+            const mainSection = document.getElementById('mainSection');
+            const signOutBtn = document.getElementById('signOutBtn');
+            
+            if (user) {
+                authStatus.innerHTML = `<span class="success">Signed in as: ${user.email}</span>`;
+                mainSection.style.display = 'block';
+                signOutBtn.style.display = 'inline-block';
+            } else {
+                authStatus.innerHTML = '<span class="error">Not signed in</span>';
+                mainSection.style.display = 'none';
+                signOutBtn.style.display = 'none';
+            }
+        });
+        
+        window.signIn = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                document.getElementById('authStatus').innerHTML = '<span class="success">Sign in successful!</span>';
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        window.signUp = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                document.getElementById('authStatus').innerHTML = '<span class="success">Account created successfully!</span>';
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+        
+        window.signOut = async function() {
+            try {
+                await auth.signOut();
+                document.getElementById('authStatus').innerHTML = '<span class="error">Signed out</span>';
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        }
+        
+        window.uploadDefaultLevels = async function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Starting upload...';
+            
+            // Check if user is authenticated
+            if (!auth.currentUser) {
+                statusDiv.innerHTML = '<span class="error">You must be signed in to upload levels</span>';
+                return;
+            }
+            
+            try {
+                const defaultLevels = DEFAULT_LEVELS || [];
+                const defaultNames = DEFAULT_LEVEL_NAMES || [];
+                const defaultPositions = DEFAULT_PLAYER_START_POSITIONS || [];
+                
+                if (defaultLevels.length === 0) {
+                    throw new Error('No default levels found!');
+                }
+                
+                statusDiv.innerHTML += '<br>Found ' + defaultLevels.length + ' default levels';
+                
+                // Create a batch write
+                const batch = db.batch();
+                
+                // Upload each level
+                for (let i = 0; i < defaultLevels.length; i++) {
+                    const levelData = {
+                        name: defaultNames[i] || `Level ${i + 1}`,
+                        grid: JSON.stringify(defaultLevels[i]),
+                        startPosition: defaultPositions[i] || { x: 1, y: 12 },
+                        isDefault: true,
+                        order: i,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    // Use a consistent ID for default levels
+                    const docRef = db.collection('defaultLevels').doc(`level_${i}`);
+                    batch.set(docRef, levelData);
+                    
+                    statusDiv.innerHTML += '<br>Prepared level ' + (i + 1) + ': ' + levelData.name;
+                }
+                
+                // Commit the batch
+                await batch.commit();
+                
+                statusDiv.innerHTML += '<br><span class="success">✓ All default levels uploaded successfully!</span>';
+                
+            } catch (error) {
+                console.error('Error uploading levels:', error);
+                statusDiv.innerHTML += '<br><span class="error">✗ Error: ' + error.message + '</span>';
+            }
+        }
+        
+        window.clearDefaultLevels = async function() {
+            if (!confirm('Are you sure you want to delete all default levels from Firebase?')) {
+                return;
+            }
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Clearing default levels...';
+            
+            // Check if user is authenticated
+            if (!auth.currentUser) {
+                statusDiv.innerHTML = '<span class="error">You must be signed in to clear levels</span>';
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('defaultLevels').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                statusDiv.innerHTML += '<br><span class="success">✓ All default levels cleared!</span>';
+            } catch (error) {
+                console.error('Error clearing levels:', error);
+                statusDiv.innerHTML += '<br><span class="error">✗ Error: ' + error.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>

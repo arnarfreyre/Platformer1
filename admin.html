@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platformer Admin Panel</title>
+    <link rel="icon" href="favicon.svg" type="image/x-icon">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: #222;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #ff6b6b;
+        }
+        
+        .auth-section {
+            background-color: #222;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .auth-section input {
+            padding: 10px;
+            margin: 10px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .auth-section button {
+            padding: 10px 30px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .auth-section button:hover {
+            background-color: #ff5252;
+        }
+        
+        .admin-panel {
+            display: none;
+        }
+        
+        .admin-panel.active {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: #222;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background-color: #333;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .tab:hover {
+            background-color: #444;
+        }
+        
+        .tab.active {
+            background-color: #4c6baf;
+        }
+        
+        .tab-content {
+            display: none;
+            background-color: #222;
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .level-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .level-item {
+            background-color: #333;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        .level-item:hover {
+            background-color: #444;
+        }
+        
+        .level-info {
+            flex: 1;
+        }
+        
+        .level-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .level-meta {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .level-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 5px 15px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #4c6baf;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #6d8ad0;
+        }
+        
+        .btn-danger {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #ff5252;
+        }
+        
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #777;
+        }
+        
+        .move-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .move-btn {
+            width: 30px;
+            height: 25px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #555;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .move-btn:hover {
+            background-color: #666;
+        }
+        
+        .move-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: #222;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #4c6baf;
+        }
+        
+        .modal-body input,
+        .modal-body textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status-message.success {
+            background-color: #28a745;
+            display: block;
+        }
+        
+        .status-message.error {
+            background-color: #dc3545;
+            display: block;
+        }
+        
+        .status-message.info {
+            background-color: #17a2b8;
+            display: block;
+        }
+        
+        .filter-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-controls input,
+        .filter-controls select {
+            padding: 8px;
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 5px;
+        }
+        
+        .stats-box {
+            background-color: #333;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #4c6baf;
+        }
+        
+        .stat-label {
+            color: #aaa;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h1>🔒 Platformer Admin Panel</h1>
+            <p>Manage default levels and moderate online content</p>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <h2>Admin Authentication</h2>
+            <p>Enter admin password to access the panel</p>
+            <input type="password" id="adminPassword" placeholder="Admin Password">
+            <button onclick="authenticate()">Login</button>
+            <div id="authError" style="color: #ff6b6b; margin-top: 10px; display: none;">
+                Invalid password. Please try again.
+            </div>
+        </div>
+
+        <!-- Admin Panel (hidden until authenticated) -->
+        <div class="admin-panel" id="adminPanel">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('default')">Default Levels</button>
+                <button class="tab" onclick="switchTab('online')">Online Levels</button>
+                <button class="tab" onclick="switchTab('stats')">Statistics</button>
+            </div>
+
+            <!-- Default Levels Tab -->
+            <div class="tab-content active" id="defaultTab">
+                <h2>Manage Default Levels</h2>
+                <div class="status-message" id="defaultStatus"></div>
+                <ul class="level-list" id="defaultLevelsList">
+                    <!-- Default levels will be loaded here -->
+                </ul>
+            </div>
+
+            <!-- Online Levels Tab -->
+            <div class="tab-content" id="onlineTab">
+                <h2>Moderate Online Levels</h2>
+                <div class="filter-controls">
+                    <input type="text" id="searchInput" placeholder="Search by name or author...">
+                    <select id="sortBy">
+                        <option value="createdAt">Newest First</option>
+                        <option value="plays">Most Played</option>
+                        <option value="reports">Most Reported</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="refreshOnlineLevels()">Refresh</button>
+                </div>
+                <div class="status-message" id="onlineStatus"></div>
+                <ul class="level-list" id="onlineLevelsList">
+                    <!-- Online levels will be loaded here -->
+                </ul>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div class="tab-content" id="statsTab">
+                <h2>Platform Statistics</h2>
+                <div class="stats-box">
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats will be loaded here -->
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="refreshStats()">Refresh Statistics</button>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Level</h3>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="editLevelName" placeholder="Level Name">
+                    <textarea id="editLevelDescription" placeholder="Level Description (optional)" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/constants.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
