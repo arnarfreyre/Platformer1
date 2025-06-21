@@ -387,9 +387,9 @@ class OnlineLevelBrowser {
             
             // Parse the level grid based on how it's stored
             let grid;
-            if (levelData.data && Array.isArray(levelData.data)) {
-                // New format: data field contains the grid array
-                grid = levelData.data;
+            if (levelData.data) {
+                // New format: data field (parse if string)
+                grid = typeof levelData.data === 'string' ? JSON.parse(levelData.data) : levelData.data;
             } else if (levelData.grid) {
                 // Grid stored as string or array
                 grid = typeof levelData.grid === 'string' ? JSON.parse(levelData.grid) : levelData.grid;

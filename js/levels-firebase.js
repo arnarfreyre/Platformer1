@@ -140,7 +140,14 @@ class LevelLoader {
                 let levelData;
                 try {
                     // The data field contains the actual level grid
-                    levelData = data.data || (typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid);
+                    if (data.data) {
+                        levelData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+                    } else if (data.grid) {
+                        levelData = typeof data.grid === 'string' ? JSON.parse(data.grid) : data.grid;
+                    } else {
+                        console.error(`No level data found for ${data.name}`);
+                        return;
+                    }
                 } catch (error) {
                     console.error(`Error parsing custom level ${data.name}:`, error);
                     return;

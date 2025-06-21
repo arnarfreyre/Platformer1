@@ -720,9 +720,9 @@ class LevelEditor {
                 const levelData = {
                     id: levelId, // Store the ID in the document
                     name: levelNames[i].trim(),
-                    data: levels[i],
+                    data: JSON.stringify(levels[i]), // Convert to string to avoid nested array error
                     order: i,
-                    rotationData: rotationData[i] || null,
+                    rotationData: rotationData[i] ? JSON.stringify(rotationData[i]) : null,
                     playerStart: null,
                     author: 'Level Editor User', // You can implement user auth later
                     plays: 0,
