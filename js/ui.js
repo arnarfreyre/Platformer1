@@ -1,7 +1,7 @@
 /**
  * UI Manager for handling menu interactions and UI updates
  */
-import { levelLoader } from './levels.js';
+import { levelLoader } from './levels-firebase.js';
 import { audioManager } from './audio.js';
 
 class UIManager {
@@ -155,20 +155,27 @@ class UIManager {
     this.onlineBrowser.show();
     }
     // Initialize the level select menu with buttons for each level
-    initLevelSelectMenu() {
+    async initLevelSelectMenu() {
         console.log("Initializing level select menu");
         if (!this.levelButtons) {
             console.error("Level buttons container not found");
             return;
         }
 
-        this.levelButtons.innerHTML = '';
+        // Show loading message
+        this.levelButtons.innerHTML = '<p style="text-align: center; color: #6d8ad0;">Loading levels...</p>';
 
         // Make sure levelLoader is available
         if (!levelLoader) {
             console.error("Level manager not available");
             return;
         }
+        
+        // Ensure levels are loaded from Firebase
+        await levelLoader.ensureLoaded();
+        
+        // Clear loading message
+        this.levelButtons.innerHTML = '';
 
         const levelCount = levelLoader.getLevelCount();
 
@@ -180,7 +187,12 @@ class UIManager {
             const levelButton = document.createElement('button');
             levelButton.className = 'level-button';
             levelButton.textContent = (i + 1).toString();
-            levelButton.title = levelLoader.getLevelName(i);
+            levelButton.title = levelLoader.levelNames[i] || `Level ${i + 1}`;
+            
+            // Mark default levels
+            if (i < levelLoader.defaultLevelCount) {
+                levelButton.classList.add('default-level');
+            }
 
             // Add classes based on level status
             if (!levelLoader.isLevelUnlocked(i)) {

@@ -2,7 +2,7 @@
  * Game Manager
  * Handles game initialization, loop, and state management
  */
-import { levelLoader } from './levels.js';
+import { levelLoader } from './levels-firebase.js';
 import { audioManager } from './audio.js';
 
 class GameManager {
@@ -140,8 +140,11 @@ class GameManager {
     /**
      * Start the game
      */
-    startGame() {
+    async startGame() {
         console.log("Starting game...");
+        
+        // Ensure levels are loaded from Firebase
+        await levelLoader.ensureLoaded();
 
         // If a test level was specified, start that level
         if (this.testLevelIndex !== undefined) {

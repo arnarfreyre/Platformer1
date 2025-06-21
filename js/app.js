@@ -3,7 +3,7 @@
  * This file coordinates the loading and initialization of all game components
  */
 
-import { levelLoader } from './levels.js';  // Changed from levelManager to levelLoader
+import { levelLoader } from './levels-firebase.js';  // Use Firebase version
 import { audioManager } from './audio.js';
 import { GameManager } from './game.js';
 import { UIManager } from './ui.js';
