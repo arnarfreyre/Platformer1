@@ -360,11 +360,22 @@ async function refreshStats() {
 // Show status message
 function showStatus(elementId, message, type) {
     const statusElement = document.getElementById(elementId);
+    if (!statusElement) {
+        console.error(`Status element '${elementId}' not found`);
+        // Fallback: show alert for important messages
+        if (type === 'error') {
+            alert('Error: ' + message);
+        }
+        return;
+    }
+    
     statusElement.textContent = message;
     statusElement.className = 'status-message ' + type;
     
     setTimeout(() => {
-        statusElement.className = 'status-message';
+        if (statusElement) {
+            statusElement.className = 'status-message';
+        }
     }, 5000);
 }
 
