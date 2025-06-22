@@ -1,13 +1,20 @@
 /**
- * Default Levels for Pixel Platformer
- * This file contains all the default level data, separated from the level manager logic
+ * Default Levels for Pixel Platformer - BACKUP FILE ONLY
+ * 
+ * IMPORTANT: This file is NOT used by the game directly.
+ * The game loads all levels from Firebase (defaultLevels collection).
+ * 
+ * This file serves as a backup and can be used to restore default levels
+ * to Firebase using the upload-default-levels.html utility if needed.
+ * 
+ * To restore levels:
+ * 1. Open upload-default-levels.html in a browser
+ * 2. Click "Upload Default Levels" to restore from this backup
  */
 
 // Default level data - grid-based layouts
 const DEFAULT_LEVELS = [
         //Level 1
-
-    
         [
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
