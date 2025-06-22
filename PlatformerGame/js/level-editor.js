@@ -456,14 +456,21 @@ class LevelEditor {
 
                 // Add event listeners
                 cell.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    isDragging = true;
-                    updateCell(cell);
+                    // Only respond to left mouse button
+                    if (e.button === 0) {
+                        e.preventDefault();
+                        isDragging = true;
+                        updateCell(cell);
+                    }
                 });
 
-                cell.addEventListener('mouseover', () => {
-                    if (isDragging) {
+                cell.addEventListener('mouseenter', (e) => {
+                    // Only update if dragging AND left mouse button is held
+                    if (isDragging && e.buttons === 1) {
                         updateCell(cell);
+                    } else {
+                        // Stop dragging if mouse button is no longer held
+                        isDragging = false;
                     }
                 });
 
@@ -478,6 +485,11 @@ class LevelEditor {
 
         // Add mouseup event to document to stop dragging
         document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Stop dragging when mouse leaves the grid area
+        elements.levelGrid.addEventListener('mouseleave', () => {
             isDragging = false;
         });
     }
