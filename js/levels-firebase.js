@@ -62,7 +62,7 @@ class LevelLoader {
             console.log('Loading levels from Firebase...');
             
             // Load default levels from Firebase
-            const defaultSnapshot = await db.collection('defaultLevels')
+            const defaultSnapshot = await window.db.collection('defaultLevels')
                 .orderBy('order')
                 .get();
             
@@ -132,7 +132,7 @@ class LevelLoader {
             console.log('Loading custom levels from Firebase...');
             
             // Load custom levels from the 'levels' collection
-            const customSnapshot = await db.collection('levels')
+            const customSnapshot = await window.db.collection('levels')
                 .orderBy('order')
                 .get();
             
@@ -408,6 +408,23 @@ class LevelLoader {
             return true;
         }
         return false;
+    }
+    
+    /**
+     * Get spike rotation for a specific tile
+     */
+    getSpikeRotation(x, y) {
+        // Check if we're playing a custom level with rotation data
+        if (this.isPlayingCustomLevel && this.customLevel && this.customLevel.rotationData) {
+            if (this.customLevel.rotationData[y] && this.customLevel.rotationData[y][x] !== undefined) {
+                return this.customLevel.rotationData[y][x];
+            }
+        }
+        // Check regular spike rotations array
+        if (this.spikeRotations?.[this.currentLevel]?.[y]?.[x] !== undefined) {
+            return this.spikeRotations[this.currentLevel][y][x];
+        }
+        return 0; // Default rotation
     }
 }
 

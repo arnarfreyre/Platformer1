@@ -378,9 +378,9 @@ class OnlineLevelBrowser {
             const level = this.currentViewedLevel;
             
             // Update play count
-            await db.collection('levels').doc(level.id).update({
-                plays: firebase.firestore.FieldValue.increment(1),
-                lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+            await window.db.collection('levels').doc(level.id).update({
+                plays: window.firebase.firestore.FieldValue.increment(1),
+                lastPlayed: window.firebase.firestore.FieldValue.serverTimestamp()
             });
 
             // Open the game with the online level ID

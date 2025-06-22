@@ -513,7 +513,7 @@ class GameManager {
             console.log("Loading online level:", levelId);
             
             // Load the level from Firebase
-            const doc = await db.collection('levels').doc(levelId).get();
+            const doc = await window.db.collection('levels').doc(levelId).get();
             
             if (!doc.exists) {
                 console.error("Online level not found:", levelId);
