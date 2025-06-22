@@ -90,6 +90,10 @@ class OnlineLevelBrowser {
     }
 
     async show() {
+        console.log('Showing online levels browser');
+        console.log('window.levelAPI available:', !!window.levelAPI);
+        console.log('window.db available:', !!window.db);
+        
         // Show the online levels menu
         document.getElementById('onlineLevelsMenu').style.display = 'flex';
 
@@ -149,7 +153,9 @@ class OnlineLevelBrowser {
                 options.filters.difficulty = this.currentFilter.difficulty;
             }
 
+            console.log('Loading online levels with options:', options);
             const result = await window.levelAPI.getLevels(options);
+            console.log('Loaded levels:', result);
 
             this.displayLevels(result.levels, 'onlineLevelsList');
             this.lastDoc = result.lastDoc;
@@ -297,6 +303,7 @@ class OnlineLevelBrowser {
     }
 
     async showLevelDetails(level) {
+        console.log('Showing level details for:', level);
         this.currentViewedLevel = level;
 
         // Update modal content
