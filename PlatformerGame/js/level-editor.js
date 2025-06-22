@@ -32,6 +32,7 @@ class LevelEditor {
     let isPlacingPlayerStart = false;
     let currentSpikeRotation = 0; // 0, 90, 180, or 270 degrees
     let rotationData = []; // Will store rotation data for spikes
+    let playerStartPositions = []; // Store player start positions for each level
     let autoSaveTimeout = null;
 
     // Expose levels to window for testing and for copy level functionality
@@ -156,6 +157,7 @@ class LevelEditor {
             levels = [createEmptyLevel()];
             levelNames = ['My Level'];
             rotationData = [createEmptyRotationData()];
+            playerStartPositions = [null];
             currentLevel = 0;
         }
         
@@ -560,6 +562,10 @@ class LevelEditor {
         // Set the new player start position
         playerStartX = x;
         playerStartY = y;
+        
+        // Store the position for this level
+        playerStartPositions[currentLevel] = { x: x, y: y };
+        
         cell.classList.add('player-start-position');
         isPlacingPlayerStart = false;
 
@@ -630,6 +636,7 @@ class LevelEditor {
             levels = [createEmptyLevel()];
             levelNames = ['My Level'];
             rotationData = [createEmptyRotationData()];
+            playerStartPositions = [null];
             displayLevel(0);
             return;
         }
@@ -682,12 +689,14 @@ class LevelEditor {
                     if (data.playerStart) {
                         playerStartX = data.playerStart.x;
                         playerStartY = data.playerStart.y;
+                        playerStartPositions[0] = data.playerStart;
                     }
                 } else {
                     console.error('Level not found for editing');
                     // Fallback to empty level
                     levels = [createEmptyLevel()];
                     levelNames = ['Level 1'];
+                    playerStartPositions = [null];
                     initializeRotationData();
                 }
                 
@@ -724,12 +733,20 @@ class LevelEditor {
                     
                     levels.push(grid);
                     levelNames.push(data.name || `Level ${levels.length}`);
+                    
+                    // Store player start position if available
+                    if (data.playerStart) {
+                        playerStartPositions.push(data.playerStart);
+                    } else {
+                        playerStartPositions.push(null);
+                    }
                 });
                 
                 // If no levels exist, create a default empty level
                 if (levels.length === 0) {
                     levels = [createEmptyLevel()];
                     levelNames = ["Level 1"];
+                    playerStartPositions = [null];
                 }
                 
                 // Initialize rotation data
@@ -742,6 +759,7 @@ class LevelEditor {
             // Fallback to empty level on error
             levels = [createEmptyLevel()];
             levelNames = ["Level 1"];
+            playerStartPositions = [null];
             initializeRotationData();
             displayLevel(0);
         }
@@ -797,13 +815,23 @@ class LevelEditor {
             }
         }
 
-        // Reset player start position
-        playerStartX = null;
-        playerStartY = null;
-
-        // Player start position is now handled differently with Firebase
-        // We'll check if there's a player start position in the loaded data
-        // (This would be added when we properly load from Firebase)
+        // Load player start position for this level
+        if (playerStartPositions[levelIndex]) {
+            playerStartX = playerStartPositions[levelIndex].x;
+            playerStartY = playerStartPositions[levelIndex].y;
+            
+            // Display the player start marker on the grid
+            if (playerStartX !== null && playerStartY !== null) {
+                const startIndex = playerStartY * GRID_WIDTH + playerStartX;
+                const startCell = cells[startIndex];
+                if (startCell) {
+                    startCell.classList.add('player-start-position');
+                }
+            }
+        } else {
+            playerStartX = null;
+            playerStartY = null;
+        }
     }
 
     // Load player start position for a level
@@ -940,8 +968,11 @@ class LevelEditor {
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
-                // Add player start position for the current level
-                if (i === currentLevel && playerStartX !== null && playerStartY !== null) {
+                // Add player start position for this level
+                if (playerStartPositions[i]) {
+                    levelData.playerStart = playerStartPositions[i];
+                } else if (i === currentLevel && playerStartX !== null && playerStartY !== null) {
+                    // Fallback to current values if not in array
                     levelData.playerStart = { x: playerStartX, y: playerStartY };
                 }
                 
@@ -989,6 +1020,11 @@ class LevelEditor {
             if (rotationData[levelIndex]) {
                 rotationData.splice(levelIndex, 1);
             }
+            
+            // Remove player start position
+            if (playerStartPositions[levelIndex] !== undefined) {
+                playerStartPositions.splice(levelIndex, 1);
+            }
 
             // Adjust current level index if needed
             if (currentLevel >= levels.length) {
@@ -1034,6 +1070,7 @@ class LevelEditor {
         levels.push(createEmptyLevel());
         levelNames.push(`Level ${levels.length}`);
         rotationData.push(createEmptyRotationData());
+        playerStartPositions.push(null);
         await saveLevels(false);
         updateLevelSelector();
         displayLevel(levels.length - 1);
@@ -1044,6 +1081,7 @@ class LevelEditor {
         if (confirm('Are you sure you want to clear this level?')) {
             levels[currentLevel] = createEmptyLevel();
             rotationData[currentLevel] = createEmptyRotationData();
+            playerStartPositions[currentLevel] = null;
             playerStartX = null;
             playerStartY = null;
             await saveLevels(false);
@@ -1063,6 +1101,9 @@ class LevelEditor {
         if (rotationData[levelIndex] && rotationData[levelIndex - 1]) {
             [rotationData[levelIndex], rotationData[levelIndex - 1]] = [rotationData[levelIndex - 1], rotationData[levelIndex]];
         }
+        
+        // Swap player start positions
+        [playerStartPositions[levelIndex], playerStartPositions[levelIndex - 1]] = [playerStartPositions[levelIndex - 1], playerStartPositions[levelIndex]];
 
         // Save changes
         await saveLevels(false);
@@ -1088,6 +1129,9 @@ class LevelEditor {
         if (rotationData[levelIndex] && rotationData[levelIndex + 1]) {
             [rotationData[levelIndex], rotationData[levelIndex + 1]] = [rotationData[levelIndex + 1], rotationData[levelIndex]];
         }
+        
+        // Swap player start positions
+        [playerStartPositions[levelIndex], playerStartPositions[levelIndex + 1]] = [playerStartPositions[levelIndex + 1], playerStartPositions[levelIndex]];
 
         // Save changes
         await saveLevels(false);
@@ -1387,8 +1431,10 @@ class LevelEditor {
             const rotationDataForLevel = rotationData[currentLevel] || null;
             
             // Get player start position
-            let startPosition = { x: 1, y: 12 };
-            if (playerStartX !== null && playerStartY !== null) {
+            let startPosition = null;
+            if (playerStartPositions[currentLevel]) {
+                startPosition = playerStartPositions[currentLevel];
+            } else if (playerStartX !== null && playerStartY !== null) {
                 startPosition = { x: playerStartX, y: playerStartY };
             }
             
