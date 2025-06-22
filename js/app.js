@@ -12,8 +12,24 @@ import { UIManager } from './ui.js';
 window.levelLoader = levelLoader;  // Updated reference
 
 // Wait for DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log("Initializing game...");
+    
+    // Wait for Firebase to be ready
+    let firebaseReady = false;
+    const maxWaitTime = 5000; // 5 seconds
+    const startTime = Date.now();
+    
+    while (!window.db && (Date.now() - startTime) < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    if (window.db) {
+        console.log("Firebase is ready");
+        firebaseReady = true;
+    } else {
+        console.warn("Firebase initialization timed out - proceeding with fallback");
+    }
 
     // Initialize audio manager first
     audioManager.initialize();

@@ -25,9 +25,10 @@ class LevelLoader {
         // Loading state
         this.isLoading = true;
         this.loadingPromise = null;
+        this.initialized = false;
 
-        // Initialize loading
-        this.initialize();
+        // Load a minimal fallback level immediately to prevent crashes
+        this.loadFallbackLevel();
     }
 
     /**
@@ -78,6 +79,12 @@ class LevelLoader {
      * Ensure levels are loaded before accessing
      */
     async ensureLoaded() {
+        // Initialize if not already done
+        if (!this.initialized) {
+            this.initialized = true;
+            this.initialize();
+        }
+        
         if (this.loadingPromise) {
             await this.loadingPromise;
         }
@@ -95,10 +102,12 @@ class LevelLoader {
                 .orderBy('order')
                 .get();
             
-            // Clear existing levels
+            // Clear existing levels (including the fallback)
             this.levels = [];
             this.levelNames = [];
             this.playerStartPositions = [];
+            this.spikeRotations = [];
+            this.defaultLevelCount = 0;
             
             // Process default levels
             defaultSnapshot.forEach(doc => {
@@ -126,8 +135,8 @@ class LevelLoader {
             
         } catch (error) {
             console.error('Error loading levels from Firebase:', error);
-            // Load minimal fallback level
-            this.loadFallbackLevel();
+            // Don't replace existing levels if Firebase fails
+            // The fallback level loaded in constructor will remain
             this.isLoading = false;
         }
     }
@@ -328,6 +337,12 @@ class LevelLoader {
      * Get the current level data
      */
     getCurrentLevel() {
+        // Initialize if needed (for early access)
+        if (!this.initialized && !this.loadingPromise) {
+            this.initialized = true;
+            this.initialize();
+        }
+        
         // Check if we're playing a custom level (online or temp test)
         if (this.isPlayingCustomLevel && this.customLevel) {
             return this.customLevel.grid;
