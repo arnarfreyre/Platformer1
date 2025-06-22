@@ -390,8 +390,17 @@ class OnlineLevelBrowser {
                 lastPlayed: window.firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Open the game with the online level ID
-            window.location.href = `index.html?playOnline=${level.id}`;
+            // Close the modal and online levels menu
+            this.closeLevelDetails();
+            this.hide();
+            
+            // Load and play the level directly
+            if (this.gameManager) {
+                await this.gameManager.loadAndPlayOnlineLevel(level.id);
+            } else {
+                console.error('Game manager not available');
+                this.showError('Failed to load level: Game manager not found');
+            }
 
         } catch (error) {
             console.error('Error loading level:', error);
