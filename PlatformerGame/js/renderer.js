@@ -28,6 +28,7 @@ class Renderer {
 
         // Animation timers
         this.iceAnimationTime = 0;
+        this.sawbladeRotation = 0;
 
         // Initialize canvas settings
         this.updateRenderSettings();
@@ -53,6 +54,12 @@ class Renderer {
     this.iceAnimationTime += 0.02;
     if (this.iceAnimationTime > Math.PI * 2) {
         this.iceAnimationTime = 0;
+    }
+    
+    // Update sawblade rotation
+    this.sawbladeRotation += 0.05;
+    if (this.sawbladeRotation > Math.PI * 2) {
+        this.sawbladeRotation = 0;
     }
 
     // Clear canvas
@@ -238,6 +245,10 @@ class Renderer {
                     }
 
                     this.drawSpike(tileX, tileY, rotation);
+                } else if (tileId === 14) { // Sawblade
+                    this.drawSawblade(tileX, tileY);
+                } else if (tileId === 15) { // Decorative block
+                    this.drawDecorativeBlock(tileX, tileY, tileType);
                 } else {
                     this.drawRegularTile(tileX, tileY, tileType, tileId);
                 }
@@ -283,6 +294,121 @@ class Renderer {
     // Restore the context
     this.ctx.restore();
 }
+
+    /**
+     * Draw a sawblade tile that rotates
+     * @param {number} x - Tile x-coordinate
+     * @param {number} y - Tile y-coordinate
+     */
+    drawSawblade(x, y) {
+        // Save the current context state
+        this.ctx.save();
+
+        // Translate to the center of the sawblade
+        this.ctx.translate(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+
+        // Rotate based on animation time
+        this.ctx.rotate(this.sawbladeRotation);
+
+        // Draw outer circle
+        this.ctx.fillStyle = '#8B0000';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, TILE_SIZE / 2 - 2, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Draw saw teeth
+        const teethCount = 8;
+        const angleStep = (Math.PI * 2) / teethCount;
+        const innerRadius = TILE_SIZE / 2 - 8;
+        const outerRadius = TILE_SIZE / 2 - 2;
+
+        this.ctx.fillStyle = '#FF0000';
+        this.ctx.beginPath();
+
+        for (let i = 0; i < teethCount; i++) {
+            const angle = i * angleStep;
+            const nextAngle = (i + 1) * angleStep;
+            const midAngle = angle + angleStep / 2;
+
+            // Inner point
+            this.ctx.lineTo(
+                Math.cos(angle) * innerRadius,
+                Math.sin(angle) * innerRadius
+            );
+
+            // Outer point (tooth tip)
+            this.ctx.lineTo(
+                Math.cos(midAngle) * outerRadius,
+                Math.sin(midAngle) * outerRadius
+            );
+
+            // Back to inner for next tooth
+            this.ctx.lineTo(
+                Math.cos(nextAngle) * innerRadius,
+                Math.sin(nextAngle) * innerRadius
+            );
+        }
+
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Draw center bolt
+        this.ctx.fillStyle = '#666666';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Add metallic highlight
+        this.ctx.strokeStyle = '#CCCCCC';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, TILE_SIZE / 2 - 4, 0, Math.PI * 0.5);
+        this.ctx.stroke();
+
+        // Restore the context
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw a decorative block tile
+     * @param {number} x - Tile x-coordinate  
+     * @param {number} y - Tile y-coordinate
+     * @param {Object} tileType - Tile type definition
+     */
+    drawDecorativeBlock(x, y, tileType) {
+        // Draw semi-transparent base
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.fillStyle = tileType.color;
+        this.ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+        // Draw decorative pattern
+        this.ctx.globalAlpha = 0.8;
+        this.ctx.strokeStyle = '#9370DB';
+        this.ctx.lineWidth = 2;
+
+        // Draw diamond pattern
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + TILE_SIZE / 2, y + 4);
+        this.ctx.lineTo(x + TILE_SIZE - 4, y + TILE_SIZE / 2);
+        this.ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE - 4);
+        this.ctx.lineTo(x + 4, y + TILE_SIZE / 2);
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Add inner diamond
+        this.ctx.globalAlpha = 0.6;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + TILE_SIZE / 2, y + 10);
+        this.ctx.lineTo(x + TILE_SIZE - 10, y + TILE_SIZE / 2);
+        this.ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE - 10);
+        this.ctx.lineTo(x + 10, y + TILE_SIZE / 2);
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Reset alpha
+        this.ctx.globalAlpha = 1;
+    }
+
     /**
      * Draw a regular (non-spike) tile
      * @param {number} x - Tile x-coordinate

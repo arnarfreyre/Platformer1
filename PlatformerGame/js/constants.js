@@ -101,7 +101,11 @@ const TILE_TYPES = {
     12: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Down)', rotation: 180,
           editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '▼' },
     13: { color: '#FF4757', solid: false, deadly: true, name: 'Spike (Left)', rotation: 270,
-          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '◀' }
+          editorColor: '#FF4757', editorBorder: '#EE5A6F', editorSymbol: '◀' },
+    14: { color: '#8B0000', solid: false, deadly: true, sawblade: true, name: 'Sawblade',
+          editorColor: '#8B0000', editorBorder: '#FF0000', editorSymbol: '✕' },
+    15: { color: 'rgba(75,0,130,0.6)', solid: false, decorative: true, name: 'Decorative Block',
+          editorColor: '#4B0082', editorBorder: '#9370DB', editorSymbol: '◈' }
 };
 
 //-----------------------------------------------------------------------------

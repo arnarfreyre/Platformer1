@@ -321,6 +321,19 @@ class LevelEditor {
             tileElement.style.transform = `rotate(${tileType.rotation}deg)`;
             // Add tooltip to show direction
             tileElement.title = tileType.name;
+        } else if (tileId == 14) {
+            // Sawblade tile
+            tileElement.style.backgroundColor = tileType.color;
+            tileElement.style.border = '2px solid #FF0000';
+            tileElement.innerHTML = '<div style="font-size: 20px; text-align: center; line-height: 28px; color: #FF0000;">✕</div>';
+            tileElement.title = tileType.name;
+        } else if (tileId == 15) {
+            // Decorative block tile
+            tileElement.style.backgroundColor = tileType.color;
+            tileElement.style.opacity = '0.7';
+            tileElement.style.border = '1px dashed #9370DB';
+            tileElement.innerHTML = '<div style="font-size: 16px; text-align: center; line-height: 30px; color: #9370DB;">◈</div>';
+            tileElement.title = tileType.name;
         } else {
             // Regular tile
             tileElement.style.backgroundColor = tileType.color;
@@ -575,6 +588,17 @@ class LevelEditor {
             cell.style.backgroundColor = TILE_TYPES[tileType].color;
             cell.style.position = 'relative';
             cell.innerHTML = '<div style="position: absolute; top: 8px; left: 8px; width: 16px; height: 16px; background-color: #ffff00; border-radius: 50%;"></div>';
+        } else if (tileType === 14) {
+            // Sawblade tile
+            cell.style.backgroundColor = TILE_TYPES[tileType].color;
+            cell.style.position = 'relative';
+            cell.innerHTML = '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; color: #FF0000; font-weight: bold;">✕</div>';
+        } else if (tileType === 15) {
+            // Decorative block tile
+            cell.style.backgroundColor = TILE_TYPES[tileType].color;
+            cell.style.opacity = '0.7';
+            cell.style.position = 'relative';
+            cell.innerHTML = '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: #9370DB;">◈</div>';
         } else {
             // Regular tile
             cell.style.backgroundColor = TILE_TYPES[tileType]?.color || '#333';

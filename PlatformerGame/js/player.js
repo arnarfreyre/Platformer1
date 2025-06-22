@@ -584,27 +584,34 @@ class Player {
                 if (level[y][x] !== 0) {
                     const tileType = TILE_TYPES[level[y][x]];
 
-                    if (tileType && tileType.solid) {
-                        // Skip collision resolution for goal tiles
-                        if (level[y][x] === 3) continue;
-
+                    if (tileType) {
                         const tileX = x * TILE_SIZE;
                         const tileY = y * TILE_SIZE;
 
-                        // Check horizontal collision
+                        // Check collision
                         if (
                             this.x < tileX + TILE_SIZE &&
                             this.x + this.width > tileX &&
                             this.y < tileY + TILE_SIZE &&
                             this.y + this.height > tileY
                         ) {
-                            // Colliding horizontally, move player back
-                            if (this.velX > 0) {
-                                this.x = tileX - this.width;
-                            } else if (this.velX < 0) {
-                                this.x = tileX + TILE_SIZE;
+                            // Check if deadly (spike or sawblade)
+                            if (tileType.deadly) {
+                                this.alive = false;
+                                gameManager.handlePlayerDeath();
+                                return;
                             }
-                            this.velX = 0;
+
+                            // Check if solid (but not goal tiles)
+                            if (tileType.solid && level[y][x] !== 3) {
+                                // Colliding horizontally, move player back
+                                if (this.velX > 0) {
+                                    this.x = tileX - this.width;
+                                } else if (this.velX < 0) {
+                                    this.x = tileX + TILE_SIZE;
+                                }
+                                this.velX = 0;
+                            }
                         }
                     }
                 }
