@@ -302,9 +302,8 @@ class UIManager {
         if (onlineLevelsMenu) onlineLevelsMenu.style.display = 'none';
     }
 
-    // Open level editor in a new tab (like the old version)
     openLevelEditor() {
-        window.open('level-editor.html', '_blank');
+        window.location.href = 'level-editor.html';
     }
 
     // Show level complete screen
