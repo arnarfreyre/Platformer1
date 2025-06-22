@@ -7,7 +7,8 @@ class AudioManager {
             jump: document.getElementById('jumpSound'),
             death: document.getElementById('deathSound'),
             levelComplete: document.getElementById('completeSound'),
-            bgMusic: document.getElementById('bgMusic')
+            bgMusic: document.getElementById('bgMusic'),
+            menuMusic: document.getElementById('menuMusic')
         };
 
         this.settings = {
@@ -16,6 +17,7 @@ class AudioManager {
         };
 
         this.isInitialized = false;
+        this.currentMusic = null;
     }
 
     initialize() {
@@ -34,6 +36,11 @@ class AudioManager {
         // Set background music volume
         if (this.sounds.bgMusic) {
             this.sounds.bgMusic.volume = musicVol;
+        }
+        
+        // Set menu music volume
+        if (this.sounds.menuMusic) {
+            this.sounds.menuMusic.volume = musicVol;
         }
 
         // Set SFX volumes
@@ -64,17 +71,17 @@ class AudioManager {
     }
 
     playMusic() {
-        if (this.sounds.bgMusic) {
-            this.sounds.bgMusic.play().catch(e => {
-                // Handle auto-play restrictions
-                console.log("Music playback prevented:", e);
-            });
-        }
+        // This method now calls playGameMusic for backward compatibility
+        this.playGameMusic();
     }
 
     pauseMusic() {
+        // Pause all music
         if (this.sounds.bgMusic) {
             this.sounds.bgMusic.pause();
+        }
+        if (this.sounds.menuMusic) {
+            this.sounds.menuMusic.pause();
         }
     }
 
@@ -95,6 +102,38 @@ class AudioManager {
         }
 
         this.updateVolumes();
+    }
+
+    playMenuMusic() {
+        this.stopAllMusic();
+        if (this.sounds.menuMusic) {
+            this.currentMusic = 'menu';
+            this.sounds.menuMusic.play().catch(e => {
+                console.log("Menu music playback prevented:", e);
+            });
+        }
+    }
+
+    playGameMusic() {
+        this.stopAllMusic();
+        if (this.sounds.bgMusic) {
+            this.currentMusic = 'game';
+            this.sounds.bgMusic.play().catch(e => {
+                console.log("Game music playback prevented:", e);
+            });
+        }
+    }
+
+    stopAllMusic() {
+        if (this.sounds.bgMusic) {
+            this.sounds.bgMusic.pause();
+            this.sounds.bgMusic.currentTime = 0;
+        }
+        if (this.sounds.menuMusic) {
+            this.sounds.menuMusic.pause();
+            this.sounds.menuMusic.currentTime = 0;
+        }
+        this.currentMusic = null;
     }
 }
 

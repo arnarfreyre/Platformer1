@@ -260,6 +260,8 @@ class UIManager {
         switch (menuState) {
             case GameStates.MENU:
                 if (this.mainMenu) this.mainMenu.style.display = 'flex';
+                // Play menu music when showing main menu
+                audioManager.playMenuMusic();
                 break;
             case GameStates.LEVEL_SELECT:
                 this.initLevelSelectMenu();

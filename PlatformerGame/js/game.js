@@ -209,7 +209,7 @@ class GameManager {
 
         // Start audio
         audioManager.initialize();
-        audioManager.playMusic();
+        audioManager.playGameMusic();
     }
 
     /**
@@ -267,7 +267,7 @@ class GameManager {
                 this.uiManager.hideAllMenus();
             }
 
-            audioManager.playMusic();
+            audioManager.playGameMusic();
 
             // Reset timing to avoid large jumps
             this.lastUpdateTime = performance.now();
@@ -298,7 +298,7 @@ class GameManager {
             this.uiManager.showMenu(GameStates.MENU);
         }
 
-        audioManager.pauseMusic();
+        audioManager.stopAllMusic();
         
         // Clear custom level state when returning to menu
         if (levelLoader.isPlayingCustomLevel) {
@@ -618,7 +618,7 @@ class GameManager {
             
             // Start audio
             audioManager.initialize();
-            audioManager.playMusic();
+            audioManager.playGameMusic();
             
         } catch (error) {
             console.error("Error loading online level:", error);
@@ -716,7 +716,7 @@ class GameManager {
             
             // Start audio
             audioManager.initialize();
-            audioManager.playMusic();
+            audioManager.playGameMusic();
             
             // Clear the temp level from localStorage after loading
             localStorage.removeItem('tempTestLevel');
