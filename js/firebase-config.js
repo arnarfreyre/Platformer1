@@ -14,5 +14,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Make db available globally
+window.db = db;
+window.firebase = firebase;
+
 // Log successful initialization
 console.log('Firebase initialized with project:', firebaseConfig.projectId);

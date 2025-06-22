@@ -34,8 +34,37 @@ class LevelLoader {
      * Initialize the level loader
      */
     initialize() {
-        // Start loading from Firebase
-        this.loadingPromise = this.loadLevelsFromFirebase();
+        // Wait for Firebase to be ready before loading
+        this.loadingPromise = this.waitForFirebase().then(() => {
+            return this.loadLevelsFromFirebase();
+        });
+    }
+    
+    /**
+     * Wait for Firebase to be initialized
+     */
+    async waitForFirebase() {
+        // Check if Firebase is already initialized
+        if (window.db) {
+            return;
+        }
+        
+        // Wait for Firebase to be ready
+        return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                if (window.db) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 50);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                console.error('Firebase initialization timeout');
+                resolve(); // Resolve anyway to continue with fallback
+            }, 5000);
+        });
     }
     
     /**
