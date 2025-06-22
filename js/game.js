@@ -544,7 +544,10 @@ class GameManager {
             
             // Parse player start position if available
             let playerStart = null;
-            if (levelData.playerStart) {
+            if (levelData.startPosition) {
+                playerStart = typeof levelData.startPosition === 'string' ? 
+                    JSON.parse(levelData.startPosition) : levelData.startPosition;
+            } else if (levelData.playerStart) {
                 playerStart = typeof levelData.playerStart === 'string' ? 
                     JSON.parse(levelData.playerStart) : levelData.playerStart;
             }
@@ -651,7 +654,7 @@ class GameManager {
             const tempLevel = {
                 grid: grid,
                 rotationData: levelData.rotationData,
-                playerStart: levelData.playerStart,
+                playerStart: levelData.playerStart || levelData.startPosition,
                 name: levelData.name || 'Test Level'
             };
             
